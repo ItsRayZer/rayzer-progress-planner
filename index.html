@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aben's Interactive 10-Month Grind Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Report Info: Monthly/Weekly/Daily Study Plan, Tasks, Resources, Time allocations, Goals. Goal: Inform, Organize, Track Progress. Viz/Presentation: HTML lists for tasks, Tailwind CSS for styling cards and layout. Interactive checkboxes for tasks. Chart.js doughnut chart for weekly task completion. Interaction: Month selection via tabs, week selection via cards, clickable day cards to expand/collapse details, task checking via checkboxes which dynamically updates the the chart. Justification: Provides a clear, structured overview of the study plan across 10 months, allows users to drill down into daily details, and offers visual feedback on progress, enhancing motivation and engagement. Library/Method: HTML, Tailwind CSS, Vanilla JavaScript, Chart.js.
+        - Report Info: Money Moves section (Gigs, Stocks, Budget). Goal: Inform, Remind. Viz/Presentation: Static text blocks within a dedicated, styled section. Interaction: None, purely informational display. Justification: Keeps important financial planning information easily accessible and clearly separated from daily study tasks. Library/Method: HTML, Tailwind CSS.
+        - Report Info: Daily Routine section (Morning, Evening, Weekly routines). Goal: Inform, Remind. Viz/Presentation: Static text blocks within a dedicated, styled section. Interaction: None, purely informational display. Justification: Provides easy access to wellness reminders, promoting a balanced approach to the intensive study plan. Library/Method: HTML, Tailwind CSS.
+        - Report Info: Cybersecurity Concepts (e.g., CIA Triad, Ransomware). Goal: Explain, Deepen Understanding. Viz/Presentation: Dynamic text in a modal. Interaction: Click button to trigger LLM call for explanation. Justification: Provides on-demand, concise explanations for complex topics, enhancing learning efficiency. Library/Method: Vanilla JavaScript (fetch to Gemini API).
+        - Report Info: German Phrases/Topics (e.g., greetings, numbers). Goal: Provide additional practice, expand vocabulary. Viz/Presentation: Dynamic text (new sentences) in a modal. Interaction: Click button to trigger LLM call for more examples. Justification: Offers personalized, dynamic practice material beyond static content. Library/Method: Vanilla JavaScript (fetch to Gemini API).
+        - Report Info: Pro Hacks. Goal: Suggest alternative learning strategies/tips. Viz/Presentation: Dynamic text (new hack idea) in a modal. Interaction: Click button to trigger LLM call for a new idea. Justification: Adds a creative, personalized element to study tips. Library/Method: Vanilla JavaScript (fetch to Gemini API).
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        :root {
+            --bg-color-light: #FAF7F5; /* Warm off-white */
+            --text-color-light: #333333; /* Dark Gray */
+            --card-bg-light: #FFFFFF; /* White */
+            --border-color-light: #E2E8F0; /* Light Gray Border */
+            --tab-active-bg-light: #4FD1C5; /* Muted Teal */
+            --tab-active-text-light: white;
+            --tab-inactive-bg-light: #E2E8F0; /* Light Gray */
+            --tab-inactive-text-light: #4A5568; /* Medium Gray */
+            --section-title-color-light: #2D3748; /* Darker gray */
+            --completed-task-color-light: #5A677D; /* Darker gray for readability */
+            --pro-hack-badge-text-light: #333333; /* Darker text for pro hack badge */
+            --llm-button-bg-light: #4FD1C5;
+            --llm-button-hover-bg-light: #38B2AC;
+            --modal-bg-light: #fefefe;
+            --modal-shadow-light: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark {
+            --bg-color-dark: #1A202C; /* Darker Blue-Gray */
+            --text-color-dark: #E2E8F0; /* Light Gray */
+            --card-bg-dark: #2D3748; /* Dark Blue-Gray */
+            --border-color-dark: #4A5568; /* Medium Dark Gray Border */
+            --tab-active-bg-dark: #38B2AC; /* Darker Teal */
+            --tab-active-text-dark: white;
+            --tab-inactive-bg-dark: #4A5568; /* Medium Dark Gray */
+            --tab-inactive-text-dark: #CBD5E0; /* Lighter Gray */
+            --section-title-color-dark: #CBD5E0; /* Lighter gray */
+            --completed-task-color-dark: #A0AEC0; /* Even lighter gray */
+            --pro-hack-badge-text-dark: white; /* White text for pro hack badge in dark mode */
+            --llm-button-bg-dark: #38B2AC;
+            --llm-button-hover-bg-dark: #2C7A7B;
+            --modal-bg-dark: #2D3748;
+            --modal-shadow-dark: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color-light);
+            color: var(--text-color-light);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .dark body {
+            background-color: var(--bg-color-dark);
+            color: var(--text-color-dark);
+        }
+
+        .tab-active {
+            background-color: var(--tab-active-bg-light);
+            color: var(--tab-active-text-light);
+        }
+        .dark .tab-active {
+            background-color: var(--tab-active-bg-dark);
+            color: var(--tab-active-text-dark);
+        }
+        .tab-inactive {
+            background-color: var(--tab-inactive-bg-light);
+            color: var(--tab-inactive-text-light);
+        }
+        .dark .tab-inactive {
+            background-color: var(--tab-inactive-bg-dark);
+            color: var(--tab-inactive-text-dark);
+        }
+
+        .day-card, .week-card {
+            background-color: var(--card-bg-light);
+            border: 1px solid var(--border-color-light);
+            transition: all 0.3s ease-in-out;
+            border-radius: 0.75rem; /* More rounded */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Default shadow */
+        }
+        .dark .day-card, .dark .week-card {
+            background-color: var(--card-bg-dark);
+            border-color: var(--border-color-dark);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1); /* Darker shadow */
+        }
+        .day-card-header, .week-card-header {
+            cursor: pointer;
+        }
+        .week-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .dark .week-card:hover {
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.3), 0 6px 10px -3px rgba(0, 0, 0, 0.15);
+        }
+
+        .day-card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        .day-card-content.expanded {
+            max-height: 1000px; /* Adjust as needed */
+            transition: max-height 0.5s ease-in;
+        }
+        .task-checkbox:checked + label {
+            text-decoration: line-through;
+            color: var(--completed-task-color-light);
+        }
+        .dark .task-checkbox:checked + label {
+            color: var(--completed-task-color-dark);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px; /* Max width for doughnut chart */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Fixed height for doughnut chart */
+            max-height: 300px;
+        }
+        h1, h2, h3 {
+            font-weight: 700; /* Bolder headings */
+        }
+        .section-title {
+            font-size: 1.75rem; /* Larger section titles */
+            margin-bottom: 1.25rem; /* More spacing */
+            color: var(--section-title-color-light);
+            border-bottom: 2px solid var(--tab-active-bg-light);
+            padding-bottom: 0.75rem; /* More padding */
+        }
+        .dark .section-title {
+            color: var(--section-title-color-dark);
+            border-color: var(--tab-active-bg-dark);
+        }
+        .content-box {
+            background-color: var(--card-bg-light);
+            padding: 1.5rem; /* 24px */
+            border-radius: 0.75rem; /* More rounded */
+            box-shadow: 0 4px 6px -1px var(--modal-shadow-light), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .dark .content-box {
+            background-color: var(--card-bg-dark);
+            box-shadow: 0 10px 15px -3px var(--modal-shadow-dark), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        .pro-hack-badge {
+            background-color: #A0AEC0; /* Gray for Pro Hack */
+            color: var(--pro-hack-badge-text-light); /* Changed for readability */
+            font-size: 0.75rem; /* 12px */
+            padding: 0.25rem 0.5rem; /* 4px 8px */
+            border-radius: 0.25rem; /* 4px */
+            display: inline-block;
+            margin-right: 0.5rem; /* 8px */
+        }
+        .dark .pro-hack-badge {
+            color: var(--pro-hack-badge-text-dark); /* White text for dark mode */
+        }
+        .llm-button {
+            background-color: var(--llm-button-bg-light);
+            color: white;
+            padding: 0.35rem 0.9rem; /* Slightly larger buttons */
+            border-radius: 0.5rem; /* More rounded */
+            font-size: 0.875rem; /* 14px */
+            margin-left: 0.75rem; /* More spacing */
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s ease-out;
+            white-space: nowrap; /* Prevent text wrapping */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Subtle shadow */
+        }
+        .dark .llm-button {
+            background-color: var(--llm-button-bg-dark);
+        }
+        .llm-button:hover {
+            background-color: var(--llm-button-hover-bg-light);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+        .dark .llm-button:hover {
+            background-color: var(--llm-button-hover-bg-dark);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--modal-bg-light);
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px var(--modal-shadow-light);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            color: var(--text-color-light); /* Ensure modal text respects theme */
+        }
+        .dark .modal-content {
+            background-color: var(--modal-bg-dark);
+            box-shadow: 0 10px 15px var(--modal-shadow-dark);
+            color: var(--text-color-dark);
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .dark .close-button {
+             color: #CBD5E0;
+        }
+        .dark .close-button:hover,
+        .dark .close-button:focus {
+            color: white;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4FD1C5;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            background-color: var(--border-color-light);
+            border-radius: 9999px; /* Full rounded */
+            height: 16px; /* Height of the bar */
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .dark .progress-bar-container {
+            background-color: var(--border-color-dark);
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #4FD1C5; /* Muted Teal */
+            width: 0%; /* Initial width */
+            border-radius: 9999px;
+            transition: width 0.5s ease-in-out;
+        }
+        .dark .progress-bar {
+            background-color: #38B2AC; /* Darker Teal */
+        }
+
+        /* Dark Mode Toggle */
+        #darkModeToggle {
+            background-color: var(--card-bg-light);
+            border: 1px solid var(--border-color-light);
+            color: var(--text-color-light);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .dark #darkModeToggle {
+            background-color: var(--card-bg-dark);
+            border-color: var(--border-color-dark);
+            color: var(--text-color-dark);
+        }
+        #darkModeToggle:hover {
+            background-color: var(--border-color-light);
+        }
+        .dark #darkModeToggle:hover {
+            background-color: var(--border-color-dark);
+        }
+
+        /* Confetti animation */
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #4FD1C5; /* Teal */
+            opacity: 0;
+            animation: confetti-fall 2s forwards ease-out;
+            pointer-events: none;
+            z-index: 1001;
+            border-radius: 50%;
+        }
+        .confetti:nth-child(2n) { background-color: #F6AD55; /* Orange */ }
+        .confetti:nth-child(3n) { background-color: #FC8181; /* Red */ }
+        .confetti:nth-child(4n) { background-color: #667EEA; /* Indigo */ }
+        .confetti:nth-child(5n) { background-color: #9F7AEA; /* Purple */ }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 relative">
+        <button id="darkModeToggle" class="absolute top-4 right-4">
+            <span id="darkModeIcon">☀️</span>
+            <span id="darkModeText">Light Mode</span>
+        </button>
+
+        <header class="text-center mb-8 pt-12">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-gray-100">Aben's Ultimate 10-Month Grind Planner 🧠🇩🇪</h1>
+            <p class="text-gray-600 dark:text-gray-300 mt-2">Your interactive guide to crushing your goals. Stay focused, stay consistent!</p>
+        </header>
+
+        <nav class="mb-8">
+            <ul id="month-tabs" class="flex flex-wrap justify-center space-x-2 sm:space-x-4">
+                </ul>
+        </nav>
+
+        <main id="main-content">
+            <section id="month-details" class="mb-8">
+                <div id="month-goal" class="text-center p-4 bg-teal-100 border-l-4 border-teal-500 text-teal-700 rounded-md mb-6 shadow dark:bg-teal-900 dark:border-teal-700 dark:text-teal-200">
+                </div>
+                <div id="weeks-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    </div>
+            </section>
+
+            <section id="week-details" class="mb-8 hidden">
+                <button id="back-to-month" class="llm-button mb-4">← Back to Month View</button>
+                <div id="week-title" class="text-center p-4 bg-teal-100 border-l-4 border-teal-500 text-teal-700 rounded-md mb-6 shadow dark:bg-teal-900 dark:border-teal-700 dark:text-teal-200">
+                </div>
+                <div class="flex flex-col md:flex-row gap-6">
+                    <div id="days-container" class="w-full md:w-2/3 space-y-4">
+                        </div>
+                    <aside id="progress-container" class="w-full md:w-1/3 p-4 bg-white rounded-lg shadow dark:bg-gray-800 dark:text-gray-100">
+                        <h3 class="text-xl font-semibold mb-3 text-center text-gray-700 dark:text-gray-200">Weekly Task Progress</h3>
+                        <div class="chart-container">
+                            <canvas id="progressChart"></canvas>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="progressBar" class="progress-bar"></div>
+                        </div>
+                        <p id="progress-text" class="text-center mt-3 text-gray-600 dark:text-gray-300"></p>
+                    </aside>
+                </div>
+            </section>
+        </main>
+
+        <section id="money-hustle" class="my-12">
+            <h2 class="section-title text-gray-800 dark:text-gray-100">💸 Money Moves - Fueling Your Dreams</h2>
+            <div class="content-box grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h3 class="font-semibold text-lg text-gray-700 dark:text-gray-200 mb-1">Gigs</h3>
+                    <p id="gigs-content" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg text-gray-700 dark:text-gray-200 mb-1">Stocks</h3>
+                    <p id="stocks-content" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg text-gray-700 dark:text-gray-200 mb-1">Budget</h3>
+                    <p id="budget-content" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+            </div>
+             <p class="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center">This section outlines your financial strategy. Remember, smart money management is key to long-term success!</p>
+        </section>
+
+        <section id="daily-vibe-check" class="my-12">
+            <h2 class="section-title text-gray-800 dark:text-gray-100">🧘‍♂️ Daily Routine - Keeping You Fresh</h2>
+            <div class="content-box grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                    <h3 class="font-semibold text-lg text-gray-700 dark:text-gray-200 mb-1">Morning</h3>
+                    <p id="morning-vibe-content" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg text-gray-700 dark:text-gray-200 mb-1">Evening</h3>
+                    <p id="evening-vibe-content" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg text-gray-700 dark:text-gray-200 mb-1">Weekly</h3>
+                    <p id="weekly-vibe-content" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg text-gray-700 dark:text-gray-200 mb-1">Bonus Vibe</h3>
+                    <p id="bonus-vibe-content" class="text-gray-600 dark:text-gray-300"></p>
+                </div>
+            </div>
+            <p class="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center">Your well-being is paramount. These daily checks help you stay balanced and energized throughout your grind.</p>
+        </section>
+
+        <footer class="text-center mt-12 py-6 border-t border-gray-300 dark:border-gray-700">
+            <p class="text-gray-500 dark:text-gray-400 text-sm">&copy; 2025 Aben's Grind Planner. Keep pushing, vave!</p>
+        </footer>
+    </div>
+
+    <div id="llmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3 id="modalTitle" class="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-100"></h3>
+            <div id="modalContent" class="text-gray-700 dark:text-gray-200">
+                <div class="loading-spinner"></div>
+                <p class="text-center mt-2">Generating...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const studyPlanData = {
+            months: [
+                { // Month 1
+                    monthNum: 1,
+                    title: "🧠 Month 1: Core Foundations",
+                    goal: "Build a rock-solid base, think like a hacker. German: 1 hr/day (Duolingo, free, A1 basics). Time: 2 hrs cyber + 1 hr German daily.",
+                    weeks: [
+                        { weekNum: 1, dailyCyberTime: "2 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo, free, A1 basics", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn CIA Triad (30 mins)", "Learn attacks (ransomware, phishing). Watch Cyber Mentor’s YouTube intro (₹0)."] }, proHack: "Join TryHackMe (free), do “Intro to Cybersecurity” room.", german: { details: ["Duolingo A1 basics (30 mins, greetings)", "Practice 10 phrases aloud (30 mins)."] }, taskSubmission: "Summarize a recent cyberattack (100 words, use BleepingComputer)." },
+                            { dayName: "Tuesday", cyber: { details: ["Study ransomware (30 mins, BleepingComputer article)", "Learn phishing basics (30 mins, TryHackMe)", "Start 100-word attack summary (1 hr)."] }, proHack: "Bookmark BleepingComputer for news (10 mins).", german: { details: ["Duolingo (30 mins, numbers)", "Write 5 sentences using numbers (30 mins)."] }, taskSubmission: "Draft 50 words of attack summary." },
+                            { dayName: "Wednesday", cyber: { details: ["Learn DDoS attacks (30 mins, TryHackMe)", "Finish attack summary (1 hr)", "Review CIA Triad notes (30 mins)."] }, proHack: "Join a TryHackMe Discord, lurk for tips (10 mins).", german: { details: ["Duolingo (30 mins, basic verbs)", "Practice 10 verbs in sentences (30 mins)."] }, taskSubmission: "Submit 100-word attack summary." },
+                            { dayName: "Thursday", cyber: { details: ["Watch Cyber Mentor’s “Cybersecurity Careers” (30 mins)", "Study attack types (30 mins, TryHackMe)", "Quiz yourself on concepts (1 hr)."] }, proHack: "Follow 3 cyber pros on X (10 mins).", german: { details: ["Duolingo (30 mins, pronouns)", "Write 5 sentences with pronouns (30 mins)."] }, taskSubmission: "List 3 attack types (50 words)." },
+                            { dayName: "Friday", cyber: { details: ["Review TryHackMe “Intro to Cybersecurity” (1 hr)", "Research a 2025 cyberattack (1 hr, BleepingComputer)."] }, proHack: "Save 3 attack articles for reference (10 mins).", german: { details: ["Duolingo (30 mins, basic sentences)", "Practice speaking 5 sentences (30 mins)."] }, taskSubmission: "Screenshot TryHackMe progress." },
+                            { dayName: "Saturday", cyber: { details: ["Watch Cyber Mentor’s “Ethical Hacking Basics” (30 mins)", "Review notes (30 mins)", "Start a cyber glossary (1 hr, 10 terms)."] }, proHack: "Create a Google Doc for glossary (10 mins).", german: { details: ["Duolingo (30 mins, vocab review)", "Memorize 10 words (30 mins)."] }, taskSubmission: "Share 5 glossary terms." },
+                            { dayName: "Sunday", cyber: { details: ["Complete TryHackMe “Intro to Cybersecurity” room (1 hr)", "Review week’s notes (1 hr)."] }, proHack: "Post a cyber question on TryHackMe Discord (10 mins).", german: { details: ["Duolingo (30 mins, grammar)", "Write 5 sentences (30 mins)."] }, taskSubmission: "Screenshot TryHackMe room completion." }
+                        ]},
+                        { weekNum: 2, dailyCyberTime: "2 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo, free, A1 basics", days: [
+                            { dayName: "Monday", cyber: { details: ["Watch Messer’s “OSI Model” (30 mins)", "Study layers 1-4 (30 mins, TryHackMe)", "Take notes (1 hr)."] }, proHack: "Install Wireshark on RayZer (10 mins, ₹0).", german: { details: ["Duolingo (30 mins, food vocab)", "Practice 10 food words (30 mins)."] }, taskSubmission: "List 7 OSI layers (50 words)." },
+                            { dayName: "Tuesday", cyber: { details: ["Watch Messer’s “TCP/IP” (30 mins)", "Learn ports (80, 443, 30 mins)", "Practice Wireshark (1 hr, capture HTTP traffic)."] }, proHack: "Filter HTTP in Wireshark (10 mins).", german: { details: ["Duolingo (30 mins, adjectives)", "Write 5 sentences with adjectives (30 mins)."] }, taskSubmission: "Capture 10 packets, screenshot HTTP vs HTTPS." },
+                            { dayName: "Wednesday", cyber: { details: ["Study DNS (30 mins, Messer)", "Practice Wireshark HTTPS capture (1 hr)", "Review OSI notes (30 mins)."] }, proHack: "Save Wireshark capture file (10 mins).", german: { details: ["Duolingo (30 mins, questions)", "Practice 5 questions aloud (30 mins)."] }, taskSubmission: "Explain DNS in 50 words." },
+                            { dayName: "Thursday", cyber: { details: ["Watch Messer’s “Ports & Protocols” (30 mins)", "Quiz OSI/TCP-IP (30 mins)", "Analyze Wireshark capture (1 hr)."] }, proHack: "Export Wireshark capture as CSV (10 mins).", german: { details: ["Duolingo (30 mins, time vocab)", "Write 5 time sentences (30 mins)."] }, taskSubmission: "Screenshot 5 HTTPS packets." },
+                            { dayName: "Friday", cyber: { details: ["Learn subnetting (30 mins, Messer)", "Practice Wireshark filters (1 hr)", "Review ports (30 mins)."] }, proHack: "Filter TCP in Wireshark (10 mins).", german: { details: ["Duolingo (30 mins, review)", "Memorize 10 words (30 mins)."] }, taskSubmission: "Explain subnetting (50 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Complete TryHackMe “Network Fundamentals” (1 hr)", "Review week’s notes (1 hr)."] }, proHack: "Join a networking Discord (10 mins).", german: { details: ["Duolingo (30 mins, grammar)", "Practice 5 sentences (30 mins)."] }, taskSubmission: "Screenshot TryHackMe progress." },
+                            { dayName: "Sunday", cyber: { details: ["Practice 10 Wireshark captures (1 hr)", "Update cyber glossary (1 hr, 5 terms)."] }, proHack: "Share a networking tip on Discord (10 mins).", german: { details: ["Duolingo (30 mins, review)", "Write 5 sentences (30 mins)."] }, taskSubmission: "Share 5 glossary terms." }
+                        ]},
+                        { weekNum: 3, dailyCyberTime: "2 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo, free, A1 basics", days: [
+                            { dayName: "Monday", cyber: { details: ["Study Windows permissions (30 mins, Messer)", "Install Ubuntu VM (30 mins, VirtualBox)", "Practice user perms (1 hr)."] }, proHack: "Create a test user in Ubuntu (10 mins).", german: { details: ["Duolingo (30 mins, introductions)", "Practice 5 intros (30 mins)."] }, taskSubmission: "Screenshot Ubuntu user creation." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn Linux permissions (30 mins, Linux Journey)", "Set up ufw on Ubuntu (1 hr)", "Review Windows perms (30 mins)."] }, proHack: "Block port 80 with ufw (10 mins).", german: { details: ["Duolingo (30 mins, family vocab)", "Write 5 family sentences (30 mins)."] }, taskSubmission: "Screenshot ufw rule." },
+                            { dayName: "Wednesday", cyber: { details: ["Study Windows Defender (30 mins, Messer)", "Practice ufw rules (1 hr)", "Quiz perms (30 mins)."] }, proHack: "Test ufw by pinging VM (10 mins).", german: { details: ["Duolingo (30 mins, directions)", "Practice 5 direction phrases (30 mins)."] }, taskSubmission: "Explain permissions (50 words)." },
+                            { dayName: "Thursday", cyber: { details: ["Learn Linux sudo (30 mins, Linux Journey)", "Configure Defender firewall (1 hr)", "Review ufw (30 mins)."] }, proHack: "Add a Defender rule (10 mins).", german: { details: ["Duolingo (30 mins, shopping vocab)", "Write 5 shopping sentences (30 mins)."] }, taskSubmission: "Screenshot Defender rule." },
+                            { dayName: "Friday", cyber: { details: ["Practice Linux file perms (1 hr, chmod)", "Review Defender rules (30 mins)", "Update glossary (30 mins)."] }, proHack: "Script a chmod command (10 mins).", german: { details: ["Duolingo (30 mins, review)", "Memorize 10 words (30 mins)."] }, taskSubmission: "Share script (20 lines)." },
+                            { dayName: "Saturday", cyber: { details: ["Complete Linux Journey “Permissions” (1 hr)", "Test VM firewall (1 hr)."] }, proHack: "Join a Linux Discord (10 mins).", german: { details: ["Duolingo (30 mins, grammar)", "Practice 5 sentences (30 mins)."] }, taskSubmission: "Screenshot VM firewall test." },
+                            { dayName: "Sunday", cyber: { details: ["Review week’s notes (1 hr)", "Practice perms quiz (1 hr)."] }, proHack: "Share a firewall tip on Discord (10 mins).", german: { details: ["Duolingo (30 mins, review)", "Write 5 sentences (30 mins)."] }, taskSubmission: "Share 5 glossary terms." }
+                        ]},
+                        { weekNum: 4, dailyCyberTime: "2 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo, free, A1 basics", days: [
+                            { dayName: "Monday", cyber: { details: ["Study viruses/trojans (30 mins, MITRE ATT&CK)", "Explore Any.Run (30 mins)", "Start malware summary (1 hr)."] }, proHack: "Sign up for Any.Run (10 mins, free).", german: { details: ["Duolingo (30 mins, travel vocab)", "Practice 5 travel phrases (30 mins)."] }, taskSubmission: "Draft 50 words of malware summary." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn ransomware (30 mins, MITRE)", "Analyze a safe Any.Run sample (1 hr)", "Review viruses (30 mins)."] }, proHack: "Save Any.Run report (10 mins).", german: { details: ["Duolingo (30 mins, hobbies)", "Write 5 hobby sentences (30 mins)."] }, taskSubmission: "Screenshot Any.Run sample." },
+                            { dayName: "Wednesday", cyber: { details: ["Study worms (30 mins, MITRE)", "Continue malware summary (1 hr)", "Review ransomware (30 mins)."] }, proHack: "Filter Any.Run for ransomware (10 mins).", german: { details: ["Duolingo (30 mins, weather)", "Practice 5 weather phrases (30 mins)."] }, taskSubmission: "Finish 100-word malware summary." },
+                            { dayName: "Thursday", cyber: { details: ["Learn MITRE ATT&CK TTPs (1 hr)", "Quiz malware types (30 mins)", "Update glossary (30 mins)."] }, proHack: "Bookmark MITRE for reference (10 mins).", german: { details: ["Duolingo (30 mins, food)", "Write 5 food sentences (30 mins)."] }, taskSubmission: "List 3 TTPs (50 words)." },
+                            { dayName: "Friday", cyber: { details: ["Analyze another Any.Run sample (1 hr)", "Review MITRE TTPs (30 mins)", "Quiz glossary (30 mins)."] }, proHack: "Export Any.Run report as PDF (10 mins).", german: { details: ["Duolingo (30 mins, review)", "Memorize 10 words (30 mins)."] }, taskSubmission: "Screenshot Any.Run report." },
+                            { dayName: "Saturday", cyber: { details: ["Complete TryHackMe “Malware Introductory” (1 hr)", "Review week’s notes (1 hr)."] }, proHack: "Join a malware analysis Discord (10 mins).", german: { details: ["Duolingo (30 mins, grammar)", "Practice 5 sentences (30 mins)."] }, taskSubmission: "Screenshot TryHackMe progress." },
+                            { dayName: "Sunday", cyber: { details: ["Review Any.Run samples (1 hr)", "Update glossary (1 hr, 5 terms)."] }, proHack: "Share a malware tip on Discord (10 mins).", german: { details: ["Duolingo (30 mins, review)", "Write 5 sentences (30 mins)."] }, taskSubmission: "Share 5 glossary terms." }
+                        ]}
+                    ]
+                },
+                { // Month 2
+                    monthNum: 2,
+                    title: "🔐 Month 2: Hands-On Hacking",
+                    goal: "Get dirty with tools, start CTFs, own Kali. German: 1 hr/day (Duolingo + Babbel trial, ~₹500). Time: 2.5 hrs cyber + 1 hr German daily.",
+                    weeks: [
+                        { weekNum: 5, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo + Babbel trial, ~₹500", days: [
+                            { dayName: "Monday", cyber: { details: ["Study hashing (30 mins)", "Study MFA (30 mins)", "Study brute-force attacks (1 hr). Check OWASP Cheatsheet (free)."] }, proHack: "Crack a weak hash with John the Ripper (ethical, on Kali VM).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Create a 100-word password policy (8 rules)." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn spoofing (1 hr, PhishTank)", "Learn pretexting (1 hr, PhishTank)."] }, proHack: "Draft a fake phishing email (don’t send, just study).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Spot 5 phishing red flags, screenshot a PhishTank sample." },
+                            { dayName: "Wednesday", cyber: { details: ["Solve beginner CTFs on OverTheWire Bandit (1 hr)", "Solve beginner CTFs on TryHackMe (1.5 hrs, ~₹800/month)."] }, proHack: "Join HackTheBox Discord, steal pro tips.", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Solve 3 Bandit levels, screenshot flags." },
+                            { dayName: "Thursday", cyber: { details: ["Install Kali VM (1 hr, VirtualBox, ₹0)", "Learn nmap (1 hr)", "Learn Burp Suite (30 mins)."] }, proHack: "Scan your home network with nmap (ethical, hide sensitive IPs).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Run nmap -sS 192.168.1.0/24, screenshot results." },
+                            { dayName: "Friday", cyber: { details: ["Practice nmap scans (1 hr)", "Practice Burp Suite basics (1.5 hrs)."] }, proHack: "Explore Kali Linux tools (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "List 5 common nmap flags and their uses." },
+                            { dayName: "Saturday", cyber: { details: ["Review password policies and hashing concepts (1 hr)", "Review phishing techniques (1.5 hrs)."] }, proHack: "Find a new CTF platform to explore (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Explain the difference between hashing and encryption (50 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Practice CTF challenges (1.5 hrs)", "Review Kali Linux commands (1 hr)."] }, proHack: "Share a Kali Linux tip on Discord (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot a successful CTF challenge completion." }
+                        ]},
+                        { weekNum: 6, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo + Babbel trial, ~₹500", days: [
+                            { dayName: "Monday", cyber: { details: ["Study spoofing techniques in detail (1 hr, PhishTank)", "Analyze 3 more PhishTank samples (1.5 hrs)."] }, proHack: "Research spear phishing vs. whaling (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Write a 100-word summary of email spoofing." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn about social engineering principles (1 hr)", "Practice identifying phishing emails (1.5 hrs)."] }, proHack: "Read about recent high-profile phishing attacks (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "List 3 common social engineering tactics." },
+                            { dayName: "Wednesday", cyber: { details: ["Draft 3 different fake phishing email scenarios (1.5 hrs)", "Review common phishing email templates (1 hr)."] }, proHack: "Think about how to make a phishing email more convincing (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Share one fake phishing email draft." },
+                            { dayName: "Thursday", cyber: { details: ["Learn about phishing detection tools (1 hr)", "Practice using online phishing analysis tools (1.5 hrs)."] }, proHack: "Set up email filters to spot suspicious emails (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Describe how an email filter helps detect phishing (50 words)." },
+                            { dayName: "Friday", cyber: { details: ["Review all phishing concepts (1.5 hrs)", "Quiz yourself on phishing red flags (1 hr)."] }, proHack: "Watch a video on real-world phishing campaigns (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "List 5 phishing red flags." },
+                            { dayName: "Saturday", cyber: { details: ["Practice identifying phishing in real-world examples (1.5 hrs)", "Review previous CTF challenges (1 hr)."] }, proHack: "Try to find 2 more PhishTank samples that are tricky (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot a tricky PhishTank sample." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on phishing and social engineering (1.5 hrs)", "Prepare for next week's CTF focus (1 hr)."] }, proHack: "Discuss phishing trends with a friend (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Summarize the key takeaway from this week's phishing study (100 words)." }
+                        ]},
+                        { weekNum: 7, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo + Babbel trial, ~₹500", days: [
+                            { dayName: "Monday", cyber: { details: ["Explore OverTheWire Bandit (1 hr)", "Solve Bandit levels 0-2 (1.5 hrs)."] }, proHack: "Read a beginner's guide to CTFs (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot Bandit level 2 flag." },
+                            { dayName: "Tuesday", cyber: { details: ["Solve Bandit levels 3-5 (1.5 hrs)", "Document steps for each solved level (1 hr)."] }, proHack: "Look for hints on Bandit levels if stuck (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Share steps for solving Bandit level 4." },
+                            { dayName: "Wednesday", cyber: { details: ["Explore TryHackMe CTF rooms (1 hr)", "Start a beginner TryHackMe CTF (1.5 hrs)."] }, proHack: "Watch a walkthrough of a beginner TryHackMe CTF (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot TryHackMe CTF progress." },
+                            { dayName: "Thursday", cyber: { details: ["Continue TryHackMe CTF (1.5 hrs)", "Learn basic Linux commands for CTFs (1 hr)."] }, proHack: "Practice common CTF commands like `ls`, `cat`, `find` (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "List 5 Linux commands useful for CTFs." },
+                            { dayName: "Friday", cyber: { details: ["Solve 3 Bandit levels (1.5 hrs)", "Review CTF methodologies (1 hr)."] }, proHack: "Try a different beginner CTF platform (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot 3 Bandit level flags." },
+                            { dayName: "Saturday", cyber: { details: ["Practice CTF challenges on TryHackMe (1.5 hrs)", "Review notes on CTF tools and techniques (1 hr)."] }, proHack: "Join a CTF community on Discord for real-time help (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Summarize your biggest CTF learning from this week (100 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Solve one more beginner CTF (1.5 hrs)", "Review all CTF notes for the week (1 hr)."] }, proHack: "Set a small personal CTF goal for next week (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot final CTF progress." }
+                        ]},
+                        { weekNum: 8, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1 hr", germanTool: "Duolingo + Babbel trial, ~₹500", days: [
+                            { dayName: "Monday", cyber: { details: ["Install Kali VM (1 hr, VirtualBox, ₹0)", "Explore Kali Linux desktop environment (1.5 hrs)."] }, proHack: "Customize your Kali desktop (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot Kali VM desktop." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn nmap basics (1.5 hrs)", "Practice basic nmap scans on a test network/VM (1 hr)."] }, proHack: "Read nmap documentation for common flags (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Run nmap -sV on a local IP, screenshot results." },
+                            { dayName: "Wednesday", cyber: { details: ["Learn Burp Suite Community Edition basics (1.5 hrs)", "Practice intercepting HTTP traffic with Burp Suite (1 hr)."] }, proHack: "Watch a Burp Suite beginner tutorial (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot Burp Suite intercepting traffic." },
+                            { dayName: "Thursday", cyber: { details: ["Scan your home network with nmap (1.5 hrs, ethical, hide sensitive IPs)", "Analyze nmap scan results (1 hr)."] }, proHack: "Identify open ports and services on your network (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Run nmap -sS 192.168.1.0/24, screenshot results." },
+                            { dayName: "Friday", cyber: { details: ["Practice more advanced nmap scans (1.5 hrs, e.g., OS detection, script scanning)", "Explore Burp Suite features like Repeater and Intruder (1 hr)."] }, proHack: "Try to find a vulnerable web application to test with Burp Suite (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "List 3 features of Burp Suite and their uses." },
+                            { dayName: "Saturday", cyber: { details: ["Review all Kali Linux tools learned this week (1.5 hrs)", "Practice using nmap and Burp Suite together (1 hr)."] }, proHack: "Read a blog post about a recent penetration test using Kali tools (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Explain the purpose of Kali Linux (50 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on Kali Linux, nmap, and Burp Suite (1.5 hrs)", "Prepare for Month 3: Web & Bug Bounty (1 hr)."] }, proHack: "Install another useful Kali tool and explore it (30 mins).", german: { details: ["Duolingo (30 mins)", "Babbel (30 mins)."] }, taskSubmission: "Screenshot your Kali Linux setup." }
+                        ]}
+                    ]
+                },
+                { // Month 3
+                    monthNum: 3,
+                    title: "🛡️ Month 3: Web & Bug Bounty",
+                    goal: "Hack web apps, start bounties, report like a pro. German: 1.5 hrs/day (Babbel + Goethe-Institut free resources). Time: 2.5 hrs cyber + 1.5 hrs German daily.",
+                    weeks: [
+                        { weekNum: 9, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1.5 hrs", germanTool: "Babbel + Goethe-Institut free resources", days: [
+                            { dayName: "Monday", cyber: { details: ["Master OWASP Top 10 (1 hr, SQLi, XSS)", "Practice SQLi on WebGoat (1.5 hrs, free)."] }, proHack: "Set up a local vulnerable web application (e.g., DVWA) (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Write a 150-word report on SQL Injection." },
+                            { dayName: "Tuesday", cyber: { details: ["Master OWASP Top 10 (1 hr, Broken Auth, Insecure Deserialization)", "Practice XSS on WebGoat (1.5 hrs, free)."] }, proHack: "Exploit XSS on DVWA (local VM, ₹0).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Write a 150-word report on Cross-Site Scripting (XSS)." },
+                            { dayName: "Wednesday", cyber: { details: ["Learn about Broken Access Control (1 hr, OWASP)", "Practice Broken Access Control on WebGoat (1.5 hrs)."] }, proHack: "Identify common misconfigurations leading to access control issues (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Explain Broken Access Control in 50 words." },
+                            { dayName: "Thursday", cyber: { details: ["Study Security Misconfiguration (1 hr, OWASP)", "Practice identifying security misconfigurations on WebGoat (1.5 hrs)."] }, proHack: "Review default credentials for common web services (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "List 3 examples of security misconfigurations." },
+                            { dayName: "Friday", cyber: { details: ["Review all OWASP Top 10 concepts (1.5 hrs)", "Quiz yourself on OWASP vulnerabilities (1 hr)."] }, proHack: "Watch a video walkthrough of a WebGoat challenge (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Write a 150-word report on one OWASP vuln." },
+                            { dayName: "Saturday", cyber: { details: ["Practice exploiting various OWASP Top 10 vulnerabilities on WebGoat/DVWA (2 hrs)", "Review notes on web application security (30 mins)."] }, proHack: "Explore the OWASP documentation for more in-depth information (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Screenshot a successful exploit on WebGoat/DVWA." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on web app security (2 hrs)", "Prepare for next week's Vuln Scanning focus (30 mins)."] }, proHack: "Read a blog post about a recent web application breach (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Summarize the importance of OWASP Top 10 (100 words)." }
+                        ]},
+                        { weekNum: 10, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1.5 hrs", germanTool: "Babbel + Goethe-Institut free resources", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn about vulnerability scanners (1 hr)", "Use Nikto on Metasploitable VM (1.5 hrs, free)."] }, proHack: "Read Nikto documentation for advanced options (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "List 5 vulns from Nikto scan." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn about SQL injection tools (1 hr)", "Use SQLmap on Metasploitable VM (1.5 hrs, free)."] }, proHack: "Understand the different SQLmap techniques (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Explain how SQLmap works (50 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Explore other vulnerability scanners (1 hr, e.g., Nessus, OpenVAS)", "Compare features of different scanners (1.5 hrs)."] }, proHack: "Install and try a free open-source vulnerability scanner (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Compare 2 vulnerability scanners (100 words)." },
+                            { dayName: "Thursday", cyber: { details: ["Script a Nikto scan in Bash (1.5 hrs)", "Save Nikto scan output to a file (1 hr)."] }, proHack: "Learn basic Bash scripting for automation (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Share your Nikto Bash script (20 lines)." },
+                            { dayName: "Friday", cyber: { details: ["Analyze scan results from Nikto and SQLmap (1.5 hrs)", "Identify false positives and false negatives (1 hr)."] }, proHack: "Research how to prioritize vulnerabilities based on severity (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "List 5 vulns from Metasploitable scan." },
+                            { dayName: "Saturday", cyber: { details: ["Practice using vulnerability scanners on different targets (2 hrs)", "Review notes on vulnerability scanning methodologies (30 mins)."] }, proHack: "Watch a video demonstration of a vulnerability scanner in action (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Screenshot a successful scan with Nikto/SQLmap." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on vulnerability scanning (2 hrs)", "Prepare for next week's Bug Bounty Intro (30 mins)."] }, proHack: "Read a case study about a company that found a critical vulnerability using a scanner (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Summarize the importance of vulnerability scanning (100 words)." }
+                        ]},
+                        { weekNum: 11, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1.5 hrs", germanTool: "Babbel + Goethe-Institut free resources", days: [
+                            { dayName: "Monday", cyber: { details: ["Join HackerOne (1 hr, free)", "Read 3 bug bounty write-ups (1.5 hrs)."] }, proHack: "Create a HackerOne profile and explore the platform (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Summarize 1 bug bounty write-up (100 words)." },
+                            { dayName: "Tuesday", cyber: { details: ["Read 2 more bug bounty write-ups (1 hr)", "Learn about common bug bounty vulnerability types (1.5 hrs)."] }, proHack: "Identify the top 5 most reported bug types on HackerOne (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "List 3 common bug bounty vulnerability types." },
+                            { dayName: "Wednesday", cyber: { details: ["Test a dummy site (1.5 hrs, bWAPP, free)", "Find a low-severity bug on bWAPP (1 hr)."] }, proHack: "Practice using Burp Suite to find bugs on bWAPP (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Screenshot a low-severity bug found on bWAPP." },
+                            { dayName: "Thursday", cyber: { details: ["Learn about CVSS scoring (1 hr)", "Draft a 200-word bug report for the bug found yesterday (1.5 hrs)."] }, proHack: "Use an online CVSS calculator to score your bug (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Draft a 200-word bug report with CVSS score." },
+                            { dayName: "Friday", cyber: { details: ["Review bug bounty program rules (1.5 hrs)", "Understand responsible disclosure guidelines (1 hr)."] }, proHack: "Read about a real-world bug bounty success story (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Explain responsible disclosure in 50 words." },
+                            { dayName: "Saturday", cyber: { details: ["Practice finding different types of bugs on bWAPP (2 hrs)", "Review notes on bug bounty methodologies (30 mins)."] }, proHack: "Try to find a medium-severity bug on bWAPP (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Screenshot a medium-severity bug found on bWAPP." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on bug bounty hunting (2 hrs)", "Prepare for next week's Pro Reporting focus (30 mins)."] }, proHack: "Join a bug bounty community on Discord or Reddit (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Summarize your biggest learning from bug bounty intro (100 words)." }
+                        ]},
+                        { weekNum: 12, dailyCyberTime: "2.5 hrs", dailyGermanTime: "1.5 hrs", germanTool: "Babbel + Goethe-Institut free resources", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn CVSS in depth (1 hr)", "Review different CVSS metrics (1.5 hrs)."] }, proHack: "Practice scoring 3 different hypothetical vulnerabilities using CVSS (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Explain CVSS in 50 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Study pentest report structures (1 hr)", "Review Pentest-Report-Template (1.5 hrs, GitHub, free)."] }, proHack: "Download and review 2 sample pentest reports (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "List 3 key sections of a pentest report." },
+                            { dayName: "Wednesday", cyber: { details: ["Build a reusable report template in Google Docs (2 hrs)", "Include sections for executive summary, findings, recommendations (30 mins)."] }, proHack: "Add placeholders for common vulnerability details in your template (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Share a screenshot of your report template." },
+                            { dayName: "Thursday", cyber: { details: ["Mock-report a SQLi vuln (2.5 hrs, 250 words)", "Focus on clear language, technical details, and impact."] }, proHack: "Get feedback on your mock report from a peer or online community (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Mock-report a SQLi vuln (250 words)." },
+                            { dayName: "Friday", cyber: { details: ["Review the importance of clear and concise reporting (1.5 hrs)", "Learn about different reporting styles (1 hr)."] }, proHack: "Read about legal implications of cybersecurity reporting (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Explain why clear reporting is crucial (50 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Practice writing reports for different vulnerability types (2 hrs)", "Review all reporting standards and best practices (30 mins)."] }, proHack: "Create a checklist for reviewing your own reports before submission (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Share a checklist for report writing (5 items)." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on professional reporting (2 hrs)", "Prepare for Month 4: Offensive Security (30 mins)."] }, proHack: "Find resources on effective communication for cybersecurity professionals (30 mins).", german: { details: ["Babbel (45 mins)", "Goethe-Institut resources (45 mins)."] }, taskSubmission: "Summarize your biggest learning from pro reporting (100 words)." }
+                        ]}
+                    ]
+                },
+                { // Month 4
+                    monthNum: 4,
+                    title: "🧰 Month 4: Offensive Security (Hack Hard)",
+                    goal: "Master exploits, build tools, flex skills. German: 1.5 hrs/day (online tutor, ~₹2,000/month). Time: 3 hrs cyber + 1.5 hrs German daily.",
+                    weeks: [
+                        { weekNum: 13, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "online tutor, ~₹2,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn buffer overflows (1.5 hrs)", "Learn reverse shells (1.5 hrs) via Exploit-DB (free)."] }, proHack: "Set up a vulnerable program for buffer overflow practice (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain buffer overflow in 150 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Write a Python buffer overflow exploit (2 hrs, test locally)", "Analyze Exploit-DB for buffer overflow examples (1 hr)."] }, proHack: "Debug your exploit code step-by-step (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Share Python buffer overflow exploit code (mock, 50 lines)." },
+                            { dayName: "Wednesday", cyber: { details: ["Practice creating reverse shells (2 hrs)", "Understand different types of reverse shells (netcat, Python, Bash) (1 hr)."] }, proHack: "Set up a listener on your Kali VM for reverse shells (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain reverse shell in 50 words." },
+                            { dayName: "Thursday", cyber: { details: ["Learn about bind shells vs. reverse shells (1.5 hrs)", "Practice deploying reverse shells to a test VM (1.5 hrs)."] }, proHack: "Troubleshoot common reverse shell issues (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Compare bind shell and reverse shell (100 words)." },
+                            { dayName: "Friday", cyber: { details: ["Review exploitation techniques (2 hrs)", "Quiz yourself on buffer overflows and reverse shells (1 hr)."] }, proHack: "Find a new exploit on Exploit-DB and try to understand it (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 common exploitation techniques." },
+                            { dayName: "Saturday", cyber: { details: ["Practice exploiting vulnerable applications with buffer overflows (2.5 hrs)", "Review notes on exploitation (30 mins)."] }, proHack: "Look for write-ups of complex exploitation scenarios (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a successful buffer overflow exploit." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on exploitation (2.5 hrs)", "Prepare for next week's Privilege Escalation (30 mins)."] }, proHack: "Join an exploitation-focused Discord channel (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from exploitation (100 words)." }
+                        ]},
+                        { weekNum: 14, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "online tutor, ~₹2,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn Linux Privilege Escalation (1.5 hrs, LinPEAS)", "Practice basic Linux PE techniques (1.5 hrs)."] }, proHack: "Understand common Linux misconfigurations that lead to PE (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain Linux Privilege Escalation in 100 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn Windows Privilege Escalation (1.5 hrs, WinPEAS)", "Practice basic Windows PE techniques (1.5 hrs)."] }, proHack: "Understand common Windows misconfigurations that lead to PE (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain Windows Privilege Escalation in 100 words." },
+                            { dayName: "Wednesday", cyber: { details: ["Explore Exploit-DB for kernel exploits (1.5 hrs)", "Test a kernel exploit on Metasploitable (1.5 hrs)."] }, proHack: "Read the source code of a kernel exploit to understand its mechanism (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a successful kernel exploit on Metasploitable." },
+                            { dayName: "Thursday", cyber: { details: ["Practice finding suid/sgid binaries (1.5 hrs)", "Practice exploiting cron jobs for PE (1.5 hrs)."] }, proHack: "Look for automated PE scripts like `linpeas.sh` and `winpeas.bat` (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 Linux PE techniques." },
+                            { dayName: "Friday", cyber: { details: ["Review different PE vectors (1.5 hrs)", "Quiz yourself on PE concepts (1.5 hrs)."] }, proHack: "Find a new PE technique and research it (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Escalate to root/admin, screenshot proof." },
+                            { dayName: "Saturday", cyber: { details: ["Practice privilege escalation on various vulnerable VMs (2.5 hrs)", "Review notes on privilege escalation (30 mins)."] }, proHack: "Try to combine exploitation with privilege escalation (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a successful PE on a test VM." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on privilege escalation (2.5 hrs)", "Prepare for next week's Metasploit Domination (30 mins)."] }, proHack: "Read a blog post about a recent PE vulnerability (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from privilege escalation (100 words)." }
+                        ]},
+                        { weekNum: 15, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "online tutor, ~₹2,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Master Metasploit basics (1.5 hrs, Kali)", "Explore Metasploit modules (1.5 hrs)."] }, proHack: "Understand the Metasploit framework structure (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain Metasploit in 100 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Create payloads for test VMs (2 hrs)", "Learn about different payload types (meterpreter, shell) (1 hr)."] }, proHack: "Generate a custom payload with `msfvenom` (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 Metasploit payload types." },
+                            { dayName: "Wednesday", cyber: { details: ["Practice exploiting vulnerable services with Metasploit (2 hrs)", "Understand Metasploit exploits and auxiliary modules (1 hr)."] }, proHack: "Find a Metasploit module for a common vulnerability (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a successful Metasploit exploit." },
+                            { dayName: "Thursday", cyber: { details: ["Chain a Metasploit exploit with privilege escalation (2.5 hrs)", "Document the steps for chaining exploits (30 mins)."] }, proHack: "Watch a video on advanced Metasploit techniques (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Deploy a reverse shell, screenshot connection." },
+                            { dayName: "Friday", cyber: { details: ["Review Metasploit post-exploitation modules (1.5 hrs)", "Practice data exfiltration and persistence (1.5 hrs)."] }, proHack: "Learn about Metasploit resource scripts (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 post-exploitation techniques." },
+                            { dayName: "Saturday", cyber: { details: ["Practice using Metasploit on various vulnerable systems (2.5 hrs)", "Review notes on Metasploit framework (30 mins)."] }, proHack: "Try to automate a Metasploit attack chain (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a successful post-exploitation activity." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on Metasploit (2.5 hrs)", "Prepare for next week's Build Your Tools (30 mins)."] }, proHack: "Read a blog post about a complex Metasploit attack (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from Metasploit (100 words)." }
+                        ]},
+                        { weekNum: 16, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "online tutor, ~₹2,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Code a Python port scanner (2 hrs)", "Understand socket programming in Python (1 hr)."] }, proHack: "Start with a basic TCP port scanner (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Share Python port scanner code (mock, 50 lines)." },
+                            { dayName: "Tuesday", cyber: { details: ["Add logging to your Python script (1.5 hrs)", "Add error handling to your Python script (1.5 hrs)."] }, proHack: "Implement different logging levels (debug, info, error) (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain the importance of logging and error handling (50 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Refine your port scanner (2 hrs, e.g., add multi-threading)", "Explore other network programming concepts in Python (1 hr)."] }, proHack: "Add a feature to scan a range of IPs (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Share updated Python port scanner code (mock, 75 lines)." },
+                            { dayName: "Thursday", cyber: { details: ["Code a simple Python banner grabber (2 hrs)", "Understand how banner grabbing works (1 hr)."] }, proHack: "Combine your port scanner with banner grabbing (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Share Python banner grabber code (mock, 50 lines)." },
+                            { dayName: "Friday", cyber: { details: ["Host your Python tools on GitHub (2 hrs, free)", "Write clear README files for your tools (1 hr)."] }, proHack: "Learn about Git and GitHub basics (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Share repo link (mock or real)." },
+                            { dayName: "Saturday", cyber: { details: ["Brainstorm ideas for new cybersecurity tools you can build (2.5 hrs)", "Review notes on Python programming for security (30 mins)."] }, proHack: "Start sketching out the design for a new tool (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 ideas for new cybersecurity tools." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on building tools (2.5 hrs)", "Prepare for Month 5: Defensive Security (30 mins)."] }, proHack: "Read about open-source cybersecurity tools and their development (30 mins).", german: { details: ["Online tutor (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from building tools (100 words)." }
+                        ]}
+                    ]
+                },
+                { // Month 5
+                    monthNum: 5,
+                    title: "🛡️ Month 5: Defensive Security (Be the Wall)",
+                    goal: "Learn to protect, handle incidents. German: 1.5 hrs/day (offline classes, ~₹5,000/month). Time: 3 hrs cyber + 1.5 hrs German daily.",
+                    weeks: [
+                        { weekNum: 17, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "offline classes, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Study firewalls (1.5 hrs)", "Study IDS/IPS (Snort) (1.5 hrs) via Splunk Free."] }, proHack: "Differentiate between host-based and network-based firewalls (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain IDS vs. IPS in 100 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Set up Snort on Kali (2 hrs)", "Detect a test intrusion with Snort (1 hr)."] }, proHack: "Write a simple custom Snort rule (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Log 5 Snort alerts, explain one (100 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Learn about SIEM systems (1.5 hrs, Splunk Free)", "Explore Splunk dashboards and logs (1.5 hrs)."] }, proHack: "Integrate Snort logs into Splunk (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain SIEM in 50 words." },
+                            { dayName: "Thursday", cyber: { details: ["Review different types of firewalls (1.5 hrs)", "Practice configuring firewall rules (1.5 hrs)."] }, proHack: "Research next-generation firewalls (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 types of firewalls." },
+                            { dayName: "Friday", cyber: { details: ["Study network segmentation (1.5 hrs)", "Understand its importance in defensive security (1.5 hrs)."] }, proHack: "Design a simple network segmentation plan for a small office (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain network segmentation (100 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Practice analyzing network traffic with Snort (2.5 hrs)", "Review notes on defensive security basics (30 mins)."] }, proHack: "Find a new Snort rule and understand its purpose (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a Snort alert for a specific attack." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on defensive security (2.5 hrs)", "Prepare for next week's Incident Response (30 mins)."] }, proHack: "Read a blog post about a recent defensive security innovation (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from defensive basics (100 words)." }
+                        ]},
+                        { weekNum: 18, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "offline classes, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn Incident Response (IR) steps (1.5 hrs, SANS Cheatsheet, free)", "Understand preparation and identification phases (1.5 hrs)."] }, proHack: "Create an incident response checklist (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain the first 2 phases of IR (100 words)." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn containment and eradication phases (1.5 hrs)", "Learn recovery and post-incident activity phases (1.5 hrs)."] }, proHack: "Simulate a ransomware IR on a VM (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Write a 200-word IR plan for phishing." },
+                            { dayName: "Wednesday", cyber: { details: ["Study different types of security incidents (1.5 hrs)", "Learn about incident severity and prioritization (1.5 hrs)."] }, proHack: "Research a real-world incident response case study (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 types of security incidents." },
+                            { dayName: "Thursday", cyber: { details: ["Practice writing incident reports (2 hrs)", "Focus on clear communication and technical details (1 hr)."] }, proHack: "Use a template for incident reports (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Draft a 150-word incident report for a simulated breach." },
+                            { dayName: "Friday", cyber: { details: ["Review legal and compliance aspects of IR (1.5 hrs)", "Understand data breach notification requirements (1.5 hrs)."] }, proHack: "Research GDPR or HIPAA requirements related to data breaches (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain the importance of data breach notification (50 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Simulate different incident scenarios and practice IR steps (2.5 hrs)", "Review notes on incident response (30 mins)."] }, proHack: "Work with a friend to simulate an incident and respond (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot your simulated IR steps." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on incident response (2.5 hrs)", "Prepare for next week's SOC Life (30 mins)."] }, proHack: "Read a book or watch a documentary about a major cyber incident (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from incident response (100 words)." }
+                        ]},
+                        { weekNum: 19, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "offline classes, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Explore SOC roles (1.5 hrs)", "Understand the different tiers in a SOC (1.5 hrs)."] }, proHack: "Research job descriptions for SOC analyst positions (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 SOC roles and their responsibilities." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn about SIEM tools (1.5 hrs, ELK Stack)", "Watch John Strand’s vids on ELK Stack (1.5 hrs, free)."] }, proHack: "Install Elasticsearch, Logstash, and Kibana (ELK) locally (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain ELK Stack in 100 words." },
+                            { dayName: "Wednesday", cyber: { details: ["Build a mini-SOC dashboard with ELK (2.5 hrs, local, ₹0)", "Ingest some sample logs into ELK (30 mins)."] }, proHack: "Customize your ELK dashboard with relevant visualizations (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot dashboard." },
+                            { dayName: "Thursday", cyber: { details: ["Explore other SOC tools (1.5 hrs, e.g., SOAR, EDR)", "Understand their functions and integrations (1.5 hrs)."] }, proHack: "Research a specific SOAR or EDR solution (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 SOC tools." },
+                            { dayName: "Friday", cyber: { details: ["Review SOC processes and workflows (1.5 hrs)", "Understand the importance of playbooks (1.5 hrs)."] }, proHack: "Draft a simple SOC playbook for a common alert (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain the role of playbooks in a SOC (50 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Practice analyzing logs in ELK Stack (2.5 hrs)", "Review notes on SOC operations (30 mins)."] }, proHack: "Find a public dataset of security logs and analyze it in ELK (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a log analysis result from ELK." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on SOC life (2.5 hrs)", "Prepare for next week's Threat Hunting (30 mins)."] }, proHack: "Attend a virtual SOC tour or webinar (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from SOC life (100 words)." }
+                        ]},
+                        { weekNum: 20, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "offline classes, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn about threat hunting (1.5 hrs)", "Understand the difference between threat hunting and traditional security (1.5 hrs)."] }, proHack: "Read a whitepaper on proactive threat hunting (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain threat hunting in 100 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Hunt IOCs with AlienVault OTX (2 hrs, free)", "Explore different types of IOCs (1 hr)."] }, proHack: "Subscribe to threat intelligence feeds (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "List 3 types of IOCs." },
+                            { dayName: "Wednesday", cyber: { details: ["Learn about YARA rules (1.5 hrs)", "Write a YARA rule for a specific file type or malware signature (1.5 hrs)."] }, proHack: "Test your YARA rule against a sample file (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Share YARA rule (100 lines max)." },
+                            { dayName: "Thursday", cyber: { details: ["Explore threat intelligence platforms (1.5 hrs, e.g., MISP, VirusTotal)", "Understand how to use them for threat hunting (1.5 hrs)."] }, proHack: "Analyze a suspicious file on VirusTotal (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Explain how VirusTotal aids threat hunting (50 words)." },
+                            { dayName: "Friday", cyber: { details: ["Practice different threat hunting methodologies (1.5 hrs)", "Learn about hypothesis-driven threat hunting (1.5 hrs)."] }, proHack: "Develop a simple threat hunting hypothesis (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Describe a threat hunting hypothesis (100 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Practice using threat hunting tools and techniques (2.5 hrs)", "Review notes on threat hunting (30 mins)."] }, proHack: "Find a new threat hunting technique and try to implement it (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Screenshot a threat hunting result." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on threat hunting (2.5 hrs)", "Prepare for Month 6: Certs to Stack (30 mins)."] }, proHack: "Join a threat hunting community or forum (30 mins).", german: { details: ["Offline classes (45 mins)", "Self-study (45 mins)."] }, taskSubmission: "Summarize your biggest learning from threat hunting (100 words)." }
+                        ]}
+                    ]
+                },
+                { // Month 6
+                    monthNum: 6,
+                    title: "🎯 Month 6: Certs to Stack",
+                    goal: "Grab Security+, eJPT, prep OSCP. German: 1.5 hrs/day (A2 exam, ~₹10,000). Time: 3 hrs cyber + 1.5 hrs German daily.",
+                    weeks: [
+                        { weekNum: 21, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "A2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Study Security+ domains (1.5 hrs, Dion Training, Udemy, ~₹1,000)", "Focus on Threats, Attacks, and Vulnerabilities (1.5 hrs)."] }, proHack: "Create flashcards for Security+ concepts (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Summarize Security+ Domain 1 (100 words)." },
+                            { dayName: "Tuesday", cyber: { details: ["Study Security+ domains (1.5 hrs, Architecture and Design)", "Focus on Implementation (1.5 hrs)."] }, proHack: "Take a Security+ practice quiz (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Summarize Security+ Domain 2 (100 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Study Security+ domains (1.5 hrs, Operations and Incident Response)", "Focus on Governance, Risk, and Compliance (1.5 hrs)."] }, proHack: "Take 3 practice exams (ExamCompass, free) (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Score 80%+, screenshot test." },
+                            { dayName: "Thursday", cyber: { details: ["Review all Security+ domains (2 hrs)", "Identify weak areas and focus on them (1 hr)."] }, proHack: "Watch Security+ cram videos (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "List 3 weak areas for Security+." },
+                            { dayName: "Friday", cyber: { details: ["Practice Security+ exam questions (2 hrs)", "Time yourself to simulate exam conditions (1 hr)."] }, proHack: "Use a Security+ study guide for quick review (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot a timed practice exam result." },
+                            { dayName: "Saturday", cyber: { details: ["Take a full-length Security+ practice exam (2.5 hrs)", "Review answers and explanations (30 mins)."] }, proHack: "Join a Security+ study group on Discord (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot full-length practice exam result." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate Security+ notes (2.5 hrs)", "Prepare for next week's eJPT Prep (30 mins)."] }, proHack: "Read testimonials from recent Security+ passers (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Summarize your biggest learning from Security+ prep (100 words)." }
+                        ]},
+                        { weekNum: 22, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "A2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Practice eLearnSecurity labs (2 hrs, ~₹8,000)", "Focus on network penetration testing labs (1 hr)."] }, proHack: "Review eJPT exam objectives (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "List 3 eJPT exam objectives." },
+                            { dayName: "Tuesday", cyber: { details: ["Practice web application penetration testing labs (2 hrs)", "Document steps for each solved lab (1 hr)."] }, proHack: "Watch eJPT lab walkthroughs if stuck (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Submit a 200-word lab report." },
+                            { dayName: "Wednesday", cyber: { details: ["Practice system penetration testing labs (2 hrs)", "Solve 5 eJPT challenges (1 hr)."] }, proHack: "Focus on understanding the underlying vulnerabilities (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot 5 eJPT challenge completions." },
+                            { dayName: "Thursday", cyber: { details: ["Review all eJPT lab concepts (2 hrs)", "Practice reporting findings from labs (1 hr)."] }, proHack: "Create a template for eJPT lab reports (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Draft a 150-word eJPT lab report." },
+                            { dayName: "Friday", cyber: { details: ["Practice eJPT style questions (2 hrs)", "Simulate the eJPT exam environment (1 hr)."] }, proHack: "Review your notes from previous weeks on Kali Linux and tools (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot a simulated eJPT exam result." },
+                            { dayName: "Saturday", cyber: { details: ["Take a full-length eJPT practice exam (2.5 hrs)", "Review answers and explanations (30 mins)."] }, proHack: "Join an eJPT study group for tips and discussions (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot full-length eJPT practice exam result." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate eJPT notes (2.5 hrs)", "Prepare for next week's OSCP Intro (30 mins)."] }, proHack: "Read success stories from eJPT certified individuals (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Summarize your biggest learning from eJPT prep (100 words)." }
+                        ]},
+                        { weekNum: 23, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "A2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Start PWK course (2 hrs, ~₹80,000, save up!)", "Review OSCP exam objectives (1 hr)."] }, proHack: "Read the OSCP syllabus in detail (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "List 3 OSCP exam objectives." },
+                            { dayName: "Tuesday", cyber: { details: ["Practice basic enumeration techniques (2 hrs)", "Focus on port scanning and service enumeration (1 hr)."] }, proHack: "Use Nmap scripts for advanced enumeration (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot a detailed Nmap scan result." },
+                            { dayName: "Wednesday", cyber: { details: ["Practice web application enumeration (2 hrs)", "Focus on directory brute-forcing and vulnerability scanning (1 hr)."] }, proHack: "Use Gobuster or Dirb for web enumeration (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "List 3 web enumeration tools." },
+                            { dayName: "Thursday", cyber: { details: ["Root 1 HackTheBox machine (2.5 hrs, free tier)", "Document the steps taken to root the machine (30 mins)."] }, proHack: "Watch a HackTheBox walkthrough if stuck (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot a rooted HTB box." },
+                            { dayName: "Friday", cyber: { details: ["Root 1 more HackTheBox machine (2.5 hrs)", "Focus on different exploitation vectors (30 mins)."] }, proHack: "Try to root a machine without a walkthrough (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot another rooted HTB box." },
+                            { dayName: "Saturday", cyber: { details: ["Root 1 more HackTheBox machine (2.5 hrs)", "Review all rooted HTB machines and their vulnerabilities (30 mins)."] }, proHack: "Join a HackTheBox community for discussions and tips (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot a third rooted HTB box." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on OSCP prep (2.5 hrs)", "Prepare for next week's Cert Exams (30 mins)."] }, proHack: "Read success stories from OSCP certified individuals (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Summarize your biggest learning from OSCP intro (100 words)." }
+                        ]},
+                        { weekNum: 24, dailyCyberTime: "3 hrs", dailyGermanTime: "1.5 hrs", germanTool: "A2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Take Security+ exam (2.5 hrs, ~₹25,000, Pearson VUE)", "Review exam experience and areas for improvement (30 mins)."] }, proHack: "Get a good night's sleep before the exam (30 mins).", german: { details: ["A2 exam (1.5 hrs)."] }, taskSubmission: "Share cert confirmation (mock or real)." },
+                            { dayName: "Tuesday", cyber: { details: ["Take eJPT exam (2.5 hrs)", "Review exam experience and areas for improvement (30 mins)."] }, proHack: "Stay calm and focused during the exam (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Share cert confirmation (mock or real)." },
+                            { dayName: "Wednesday", cyber: { details: ["Review OSCP exam guide (2 hrs)", "Understand the exam format and rules (1 hr)."] }, proHack: "Join a Discord study group for tips (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Explain OSCP exam format (50 words)." },
+                            { dayName: "Thursday", cyber: { details: ["Practice OSCP-style labs (2.5 hrs)", "Focus on time management during labs (30 mins)."] }, proHack: "Set a timer for each lab to simulate exam conditions (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot a completed OSCP-style lab." },
+                            { dayName: "Friday", cyber: { details: ["Review all notes from Months 1-6 (2.5 hrs)", "Identify any remaining knowledge gaps (30 mins)."] }, proHack: "Create a master cheat sheet of all important commands and concepts (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Share a section of your master cheat sheet." },
+                            { dayName: "Saturday", cyber: { details: ["Take a final comprehensive practice exam for all certifications (2.5 hrs)", "Celebrate your progress and achievements (30 mins)."] }, proHack: "Plan a small reward for yourself after completing this month (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Screenshot final practice exam result." },
+                            { dayName: "Sunday", cyber: { details: ["Rest and recharge (3 hrs)", "Reflect on your journey so far (30 mins)."] }, proHack: "Spend time with friends and family (30 mins).", german: { details: ["A2 exam prep (45 mins)", "Practice exams (45 mins)."] }, taskSubmission: "Write a reflection on your 6-month journey (100 words)." }
+                        ]}
+                    ]
+                },
+                { // Month 7
+                    monthNum: 7,
+                    title: "🌐 Month 7: Specialize to Shine",
+                    goal: "Pick a niche, stand out. German: 2 hrs/day (B1 prep, offline, ~₹5,000/month). Time: 3 hrs cyber + 2 hrs German daily.",
+                    weeks: [
+                        { weekNum: 25, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn AWS security basics (1.5 hrs, CloudBreach, free labs)", "Explore common AWS misconfigurations (1.5 hrs)."] }, proHack: "Set up a free AWS account and explore its security features (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Write a 150-word cloud vuln report." },
+                            { dayName: "Tuesday", cyber: { details: ["Learn Azure security basics (1.5 hrs, CloudBreach, free labs)", "Explore common Azure misconfigurations (1.5 hrs)."] }, proHack: "Set up a free Azure account and explore its security features (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Write a 150-word cloud vuln report." },
+                            { dayName: "Wednesday", cyber: { details: ["Exploit a misconfigured S3 bucket (2.5 hrs, test env)", "Understand the impact of cloud misconfigurations (30 mins)."] }, proHack: "Read a case study about a major cloud breach due to misconfiguration (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Write a 150-word cloud vuln report." },
+                            { dayName: "Thursday", cyber: { details: ["Study cloud identity and access management (IAM) (1.5 hrs)", "Learn about cloud security best practices (1.5 hrs)."] }, proHack: "Review the principle of least privilege in cloud environments (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain cloud IAM in 50 words." },
+                            { dayName: "Friday", cyber: { details: ["Review cloud security frameworks (1.5 hrs, e.g., CSA CCM)", "Quiz yourself on cloud security concepts (1.5 hrs)."] }, proHack: "Find a cloud security certification to explore (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 cloud security best practices." },
+                            { dayName: "Saturday", cyber: { details: ["Practice securing cloud environments (2.5 hrs)", "Review notes on cloud security (30 mins)."] }, proHack: "Deploy a simple, secure web application in the cloud (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot a secure cloud configuration." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on cloud security (2.5 hrs)", "Prepare for next week's Mobile Security (30 mins)."] }, proHack: "Read a blog post about a new cloud security threat (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize your biggest learning from cloud security (100 words)." }
+                        ]},
+                        { weekNum: 26, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Study Android vulnerabilities (1.5 hrs, MobSF, free)", "Learn about common Android attack vectors (1.5 hrs)."] }, proHack: "Install MobSF locally and explore its features (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 Android vulnerabilities." },
+                            { dayName: "Tuesday", cyber: { details: ["Study iOS vulnerabilities (1.5 hrs, MobSF, free)", "Learn about common iOS attack vectors (1.5 hrs)."] }, proHack: "Research jailbreaking/rooting implications for mobile security (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 iOS vulnerabilities." },
+                            { dayName: "Wednesday", cyber: { details: ["Reverse-engineer a sample APK (2.5 hrs, ethical)", "Understand static and dynamic analysis of mobile apps (30 mins)."] }, proHack: "Use online tools to decompile an APK (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Document 3 mobile vulns (150 words)." },
+                            { dayName: "Thursday", cyber: { details: ["Learn about mobile app security testing methodologies (1.5 hrs)", "Practice identifying vulnerabilities in mobile apps (1.5 hrs)."] }, proHack: "Explore OWASP Mobile Top 10 (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 mobile app security testing tools." },
+                            { dayName: "Friday", cyber: { details: ["Review mobile security best practices for developers (1.5 hrs)", "Understand secure coding principles for mobile (1.5 hrs)."] }, proHack: "Read about a recent mobile app vulnerability disclosure (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain secure mobile app development (100 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Practice mobile app penetration testing (2.5 hrs)", "Review notes on mobile security (30 mins)."] }, proHack: "Try to find a vulnerability in a simple mobile app (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot a mobile app vulnerability finding." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on mobile security (2.5 hrs)", "Prepare for next week's IoT Hacking (30 mins)."] }, proHack: "Join a mobile security community or forum (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize your biggest learning from mobile security (100 words)." }
+                        ]},
+                        { weekNum: 27, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Explore IoT vulnerabilities (1.5 hrs)", "Understand common IoT attack surfaces (1.5 hrs)."] }, proHack: "Research the OWASP IoT Top 10 (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 IoT vulnerabilities." },
+                            { dayName: "Tuesday", cyber: { details: ["Use Shodan (2 hrs, free tier) to find insecure IoT devices", "Analyze Shodan search results for IoT devices (1 hr)."] }, proHack: "Learn advanced Shodan filters for IoT devices (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot Shodan search results for IoT." },
+                            { dayName: "Wednesday", cyber: { details: ["Find an insecure IoT device (2.5 hrs, ethical)", "Analyze risks associated with the device (30 mins)."] }, proHack: "Read about common IoT device exploits (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize findings (150 words)." },
+                            { dayName: "Thursday", cyber: { details: ["Learn about IoT security testing methodologies (1.5 hrs)", "Practice identifying vulnerabilities in IoT devices (1.5 hrs)."] }, proHack: "Set up a small IoT lab with a Raspberry Pi (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 IoT security testing tools." },
+                            { dayName: "Friday", cyber: { details: ["Review IoT security best practices (1.5 hrs)", "Understand secure firmware updates and device management (1.5 hrs)."] }, proHack: "Read about a recent IoT botnet attack (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain secure IoT device management (100 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Practice IoT penetration testing (2.5 hrs)", "Review notes on IoT security (30 mins)."] }, proHack: "Try to find a vulnerability in a simulated IoT device (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot an IoT vulnerability finding." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on IoT hacking (2.5 hrs)", "Prepare for next week's Red vs. Blue (30 mins)."] }, proHack: "Join an IoT security community or conference (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize your biggest learning from IoT hacking (100 words)." }
+                        ]},
+                        { weekNum: 28, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Join TryHackMe Red vs. Blue (1.5 hrs, ~₹800/month)", "Understand Red Team operations (1.5 hrs)."] }, proHack: "Read about the phases of a Red Team engagement (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain Red Team operations in 100 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Understand Blue Team operations (1.5 hrs)", "Learn about defensive strategies and tools (1.5 hrs)."] }, proHack: "Research common Blue Team tools like EDR, SIEM, and SOAR (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain Blue Team operations in 100 words." },
+                            { dayName: "Wednesday", cyber: { details: ["Practice Red Team techniques on TryHackMe (2.5 hrs)", "Focus on initial access and privilege escalation (30 mins)."] }, proHack: "Watch a Red Team vs. Blue Team simulation video (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot a Red Team exercise completion." },
+                            { dayName: "Thursday", cyber: { details: ["Practice Blue Team techniques on TryHackMe (2.5 hrs)", "Focus on detection and response (30 mins)."] }, proHack: "Learn about MITRE ATT&CK framework for defense (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot a Blue Team exercise completion." },
+                            { dayName: "Friday", cyber: { details: ["Record a 5-min attack/defense video (2.5 hrs)", "Explain your strategy and tools used (30 mins)."] }, proHack: "Practice your presentation skills while recording (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Share video link (mock or real)." },
+                            { dayName: "Saturday", cyber: { details: ["Review Red Team and Blue Team methodologies (2.5 hrs)", "Analyze the effectiveness of different strategies (30 mins)."] }, proHack: "Read about purple teaming and its benefits (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain purple teaming in 50 words." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on Red vs. Blue (2.5 hrs)", "Prepare for Month 8: Job Hunt & Portfolio (30 mins)."] }, proHack: "Participate in a simulated Red vs. Blue exercise if available (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize your biggest learning from Red vs. Blue (100 words)." }
+                        ]}
+                    ]
+                },
+                { // Month 8
+                    monthNum: 8,
+                    title: "💼 Month 8: Job Hunt & Portfolio",
+                    goal: "Build a dope portfolio, land gigs. German: 2 hrs/day (B1 exam, ~₹10,000). Time: 3 hrs cyber + 2 hrs German daily.",
+                    weeks: [
+                        { weekNum: 29, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Build resume (1.5 hrs)", "Build portfolio on GitHub Pages (1.5 hrs, free)."] }, proHack: "Use a resume template tailored for cybersecurity roles (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share portfolio link (mock or real)." },
+                            { dayName: "Tuesday", cyber: { details: ["Add 1 CTF project write-up to portfolio (2 hrs)", "Focus on problem, solution, and tools used (1 hr)."] }, proHack: "Include screenshots and code snippets in your write-up (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share CTF project write-up (mock, 200 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Add 1 bug bounty project write-up to portfolio (2 hrs)", "Focus on vulnerability, impact, and remediation (1 hr)."] }, proHack: "Use a professional tone and clear language in your write-up (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share bug bounty project write-up (mock, 200 words)." },
+                            { dayName: "Thursday", cyber: { details: ["Add 1 tool development project write-up to portfolio (2 hrs)", "Focus on tool's purpose, features, and technical details (1 hr)."] }, proHack: "Link to your GitHub repository for the tool (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share tool development project write-up (mock, 200 words)." },
+                            { dayName: "Friday", cyber: { details: ["Review and refine your resume (1.5 hrs)", "Get feedback on your resume from a mentor or peer (1.5 hrs)."] }, proHack: "Use action verbs and quantify your achievements (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share updated resume (mock)." },
+                            { dayName: "Saturday", cyber: { details: ["Review and refine your portfolio (2.5 hrs)", "Ensure all links are working and content is well-presented (30 mins)."] }, proHack: "Optimize your portfolio for mobile viewing (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot your optimized portfolio." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on resume and portfolio building (2.5 hrs)", "Prepare for next week's Network Like a Boss (30 mins)."] }, proHack: "Read blog posts about successful cybersecurity portfolios (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize your biggest learning from portfolio building (100 words)." }
+                        ]},
+                        { weekNum: 30, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Research job boards for entry-level cybersecurity roles (2 hrs, e.g., LinkedIn, Indeed)", "Identify key skills and requirements (1 hr)."] }, proHack: "Create a spreadsheet to track job applications and their statuses (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 common skills for entry-level cyber roles." },
+                            { dayName: "Tuesday", cyber: { details: ["Tailor your resume for 3 specific job applications (2.5 hrs)", "Highlight relevant skills and experience (30 mins)."] }, proHack: "Use keywords from the job description in your resume (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share one tailored resume (mock)." },
+                            { dayName: "Wednesday", cyber: { details: ["Write compelling cover letters for 3 job applications (2.5 hrs)", "Explain why you're a good fit for each role (30 mins)."] }, proHack: "Research the company culture and values to personalize your cover letter (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share one cover letter draft (mock, 150 words)." },
+                            { dayName: "Thursday", cyber: { details: ["Practice common cybersecurity interview questions (2 hrs)", "Focus on behavioral and technical questions (1 hr)."] }, proHack: "Record yourself answering interview questions and review for improvement (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 common cyber interview questions." },
+                            { dayName: "Friday", cyber: { details: ["Participate in a mock interview with a friend or mentor (2.5 hrs)", "Get constructive feedback on your performance (30 mins)."] }, proHack: "Prepare questions to ask the interviewer at the end of the interview (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize mock interview feedback (100 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Network on LinkedIn (2.5 hrs)", "Connect with cybersecurity professionals and recruiters (30 mins)."] }, proHack: "Send personalized connection requests with a brief introduction (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot 5 new LinkedIn connections." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on job application strategies (2.5 hrs)", "Prepare for next week's Interview Mastery (30 mins)."] }, proHack: "Read articles on effective job searching in cybersecurity (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize your biggest learning from job application prep (100 words)." }
+                        ]},
+                        { weekNum: 31, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Deep dive into network security interview questions (2 hrs)", "Review concepts like firewalls, IDS/IPS, VPNs (1 hr)."] }, proHack: "Draw network diagrams to explain concepts during practice (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Explain VPN in 50 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Deep dive into web application security interview questions (2 hrs)", "Review OWASP Top 10, common attack vectors (1 hr)."] }, proHack: "Discuss real-world web attack examples with a peer (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 web attack vectors." },
+                            { dayName: "Wednesday", cyber: { details: ["Deep dive into incident response interview questions (2 hrs)", "Review IR phases, tools, and reporting (1 hr)."] }, proHack: "Outline a hypothetical incident response plan for a given scenario (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Explain IR phases in 100 words." },
+                            { dayName: "Thursday", cyber: { details: ["Practice explaining your CTF/bug bounty projects (2.5 hrs)", "Focus on technical challenges and solutions (30 mins)."] }, proHack: "Prepare a concise elevator pitch for each project (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Record a 2-min project explanation video (mock)." },
+                            { dayName: "Friday", cyber: { details: ["Review common soft skills interview questions (2 hrs)", "Practice STAR method for answering behavioral questions (1 hr)."] }, proHack: "Identify 3-5 personal anecdotes that demonstrate your soft skills (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 soft skills important for cyber roles." },
+                            { dayName: "Saturday", cyber: { details: ["Conduct another mock interview, focusing on both technical and behavioral aspects (2.5 hrs)", "Seek feedback on your overall presentation (30 mins)."] }, proHack: "Dress professionally for your mock interview to simulate real conditions (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize comprehensive mock interview feedback (150 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate all interview prep notes (2.5 hrs)", "Relax and mentally prepare for upcoming interviews (30 mins)."] }, proHack: "Listen to cybersecurity podcasts during your break to stay immersed (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Write a motivational message to yourself for interviews." }
+                        ]},
+                        { weekNum: 32, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B1 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Attend a virtual cybersecurity career fair (2 hrs)", "Engage with company representatives (1 hr)."] }, proHack: "Prepare a list of questions to ask recruiters (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 questions for recruiters." },
+                            { dayName: "Tuesday", cyber: { details: ["Follow up with contacts made at the career fair (2.5 hrs)", "Send personalized thank-you emails (30 mins)."] }, proHack: "Connect on LinkedIn with new contacts (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Draft a thank-you email (mock, 100 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Refine your elevator pitch for various scenarios (2 hrs)", "Practice introducing yourself concisely and effectively (1 hr)."] }, proHack: "Practice your pitch in front of a mirror (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Record a 30-sec elevator pitch video (mock)." },
+                            { dayName: "Thursday", cyber: { details: ["Update your portfolio with any new projects or achievements (2.5 hrs)", "Ensure it's visually appealing and easy to navigate (30 mins)."] }, proHack: "Get a friend to review your updated portfolio for usability (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot updated portfolio." },
+                            { dayName: "Friday", cyber: { details: ["Review your online presence (2 hrs, LinkedIn, GitHub, personal blog)", "Ensure consistency and professionalism (1 hr)."] }, proHack: "Remove any unprofessional content from your social media (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 improvements to online presence." },
+                            { dayName: "Saturday", cyber: { details: ["Practice whiteboard interviews (2.5 hrs, if applicable)", "Focus on problem-solving and communication (30 mins)."] }, proHack: "Solve a simple coding challenge on a whiteboard (30 mins).", german: { details: ["B1 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize a whiteboard problem-solving session (100 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Take B1 German exam (2.5 hrs)", "Celebrate your progress and efforts! (30 mins)."] }, proHack: "Plan a small treat for yourself after the exam (30 mins).", german: { details: ["B1 exam (2 hrs)."] }, taskSubmission: "Share B1 cert confirmation (mock or real)." }
+                        ]}
+                    ]
+                },
+                { // Month 9
+                    monthNum: 9,
+                    title: "🚀 Month 9: Germany & Advanced Skills",
+                    goal: "Prep for Ausbildung, go deep. German: 2 hrs/day (B2 prep, offline, ~₹5,000/month). Time: 3 hrs cyber + 2 hrs German daily.",
+                    weeks: [
+                        { weekNum: 33, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Research cyber Ausbildung via make-it-in-germany.com (2 hrs)", "Understand the Ausbildung system in Germany (1 hr)."] }, proHack: "Identify 3-5 potential Ausbildung programs in cybersecurity (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 cyber Ausbildung programs in Germany." },
+                            { dayName: "Tuesday", cyber: { details: ["Email 3 German firms (2.5 hrs, e.g., Siemens) to inquire about Ausbildung opportunities", "Tailor your email to each firm (30 mins)."] }, proHack: "Find contact information for HR or recruiting departments (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Draft a 150-word email to a firm." },
+                            { dayName: "Wednesday", cyber: { details: ["Learn about German visa requirements for Ausbildung (2 hrs)", "Understand the application process (1 hr)."] }, proHack: "Check the website of the German embassy in India for visa details (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 German visa requirements for Ausbildung." },
+                            { dayName: "Thursday", cyber: { details: ["Research living costs in Germany (1.5 hrs)", "Understand housing, transportation, and food expenses (1.5 hrs)."] }, proHack: "Look for student accommodation options in Germany (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Estimate monthly living costs in Germany (in INR)." },
+                            { dayName: "Friday", cyber: { details: ["Review your German language skills for B2 level (2 hrs)", "Identify areas for improvement (1 hr)."] }, proHack: "Practice speaking German with a native speaker (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 areas for German language improvement." },
+                            { dayName: "Saturday", cyber: { details: ["Practice advanced pentesting techniques on HackTheBox Pro Labs (2.5 hrs, ~₹3,000/month)", "Focus on Active Directory attacks (30 mins)."] }, proHack: "Watch a walkthrough of an Active Directory attack (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot progress on HTB Pro Lab." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on Ausbildung prep and advanced skills (2.5 hrs)", "Prepare for next week's Advanced Pentesting (30 mins)."] }, proHack: "Join a community of students applying for Ausbildung in Germany (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize your biggest learning from Ausbildung prep (100 words)." }
+                        ]},
+                        { weekNum: 34, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn advanced malware analysis techniques (2 hrs, e.g., static vs. dynamic analysis)", "Explore tools like Ghidra or IDA Free (1 hr)."] }, proHack: "Download a safe malware sample (e.g., from VirusShare) and analyze its strings (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain static vs. dynamic malware analysis (100 words)." },
+                            { dayName: "Tuesday", cyber: { details: ["Practice reverse engineering a simple executable (2.5 hrs, ethical)", "Identify functions and control flow (30 mins)."] }, proHack: "Watch a video tutorial on basic reverse engineering with Ghidra (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot Ghidra analysis of a simple program." },
+                            { dayName: "Wednesday", cyber: { details: ["Study different types of malware (2 hrs, e.g., rootkits, spyware, adware)", "Understand their infection vectors and persistence mechanisms (1 hr)."] }, proHack: "Research recent high-profile malware attacks (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 types of malware." },
+                            { dayName: "Thursday", cyber: { details: ["Learn about anti-analysis techniques used by malware (2 hrs)", "Understand how to bypass them (1 hr)."] }, proHack: "Explore concepts like anti-debugging and anti-VM techniques (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain anti-analysis techniques (100 words)." },
+                            { dayName: "Friday", cyber: { details: ["Practice writing YARA rules for malware detection (2.5 hrs)", "Test your rules against various samples (30 mins)."] }, proHack: "Share a custom YARA rule with a malware analysis community (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Share a YARA rule (mock, 50 lines)." },
+                            { dayName: "Saturday", cyber: { details: ["Review all malware analysis concepts (2.5 hrs)", "Quiz yourself on different techniques and tools (30 mins)."] }, proHack: "Read a detailed malware analysis report (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize your biggest learning from malware analysis (100 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on malware analysis (2.5 hrs)", "Prepare for next week's Exploit Development (30 mins)."] }, proHack: "Set up a dedicated malware analysis lab (isolated VM) (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot your malware analysis lab setup." }
+                        ]},
+                        { weekNum: 35, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Learn about exploit development fundamentals (2 hrs)", "Understand shellcode and payloads (1 hr)."] }, proHack: "Explore resources like 'Fuzzing for Software Security' (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain shellcode in 50 words." },
+                            { dayName: "Tuesday", cyber: { details: ["Practice writing basic buffer overflow exploits (2.5 hrs, on vulnerable apps)", "Focus on controlling EIP/RIP (30 mins)."] }, proHack: "Use a debugger (e.g., GDB, x64dbg) to trace exploit execution (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Share a basic buffer overflow exploit (mock code)." },
+                            { dayName: "Wednesday", cyber: { details: ["Learn about SEH (Structured Exception Handling) overwrites (2 hrs)", "Practice exploiting SEH vulnerabilities (1 hr)."] }, proHack: "Find a vulnerable application specifically for SEH exploitation (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain SEH overwrite in 100 words." },
+                            { dayName: "Thursday", cyber: { details: ["Explore Return-Oriented Programming (ROP) (2 hrs)", "Understand how to chain gadgets for exploit development (1 hr)."] }, proHack: "Use ROPgadget tool to find gadgets in executables (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Explain ROP in 100 words." },
+                            { dayName: "Friday", cyber: { details: ["Practice developing exploits for different architectures (2.5 hrs, e.g., x86, x64)", "Understand calling conventions and stack alignment (30 mins)."] }, proHack: "Set up a multi-architecture lab environment (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 exploit development techniques." },
+                            { dayName: "Saturday", cyber: { details: ["Review all exploit development concepts (2.5 hrs)", "Quiz yourself on different types of exploits and their countermeasures (30 mins)."] }, proHack: "Read a detailed exploit write-up for a real-world vulnerability (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize your biggest learning from exploit development (100 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on exploit development (2.5 hrs)", "Prepare for next week's Advanced German Prep (30 mins)."] }, proHack: "Experiment with different shellcodes and encoders (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot a successful exploit execution." }
+                        ]},
+                        { weekNum: 36, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 prep, offline, ~₹5,000/month", days: [
+                            { dayName: "Monday", cyber: { details: ["Practice advanced German grammar (2 hrs, e.g., subjunctive, passive voice)", "Focus on complex sentence structures (1 hr)."] }, proHack: "Find a German grammar textbook and work through exercises (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Write 5 complex German sentences." },
+                            { dayName: "Tuesday", cyber: { details: ["Engage in advanced German listening practice (2.5 hrs, e.g., news, podcasts)", "Focus on understanding nuances and idiomatic expressions (30 mins)."] }, proHack: "Listen to German news channels like Tagesschau (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Summarize a German news article (50 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Practice advanced German speaking (2.5 hrs, with a tutor or language partner)", "Discuss complex topics related to cybersecurity or current events (30 mins)."] }, proHack: "Record your German speaking sessions and identify areas for improvement (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Record a 2-min German monologue (mock)." },
+                            { dayName: "Thursday", cyber: { details: ["Write essays or reports in German (2.5 hrs, ~250 words)", "Focus on coherence, cohesion, and advanced vocabulary (30 mins)."] }, proHack: "Get feedback on your written German from a native speaker (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Draft a 250-word German essay (mock)." },
+                            { dayName: "Friday", cyber: { details: ["Review B2 German exam format and strategies (2 hrs)", "Practice time management for each section (1 hr)."] }, proHack: "Take a full B2 German practice exam (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Screenshot B2 practice exam result." },
+                            { dayName: "Saturday", cyber: { details: ["Consolidate all German B2 prep notes (2.5 hrs)", "Focus on weak areas identified in practice exams (30 mins)."] }, proHack: "Immerse yourself in German media (movies, music, books) (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "List 3 weak areas for B2 German." },
+                            { dayName: "Sunday", cyber: { details: ["Final preparation for B2 German exam (2.5 hrs)", "Relax and build confidence (30 mins)."] }, proHack: "Visualize yourself successfully passing the B2 exam (30 mins).", german: { details: ["Offline classes (1 hr)", "Self-study (1 hr)."] }, taskSubmission: "Write a motivational message to yourself for the B2 exam." }
+                        ]}
+                    ]
+                },
+                { // Month 10
+                    monthNum: 10,
+                    title: "🌟 Month 10: Launch Like a Pro",
+                    goal: "Land a job/Ausbildung, flex your skills. German: 2 hrs/day (B2 exam, ~₹10,000). Time: 3 hrs cyber + 2 hrs German daily.",
+                    weeks: [
+                        { weekNum: 37, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Prep OSCP or CEH (2 hrs, ~₹80,000, fund via gigs)", "Review exam objectives (1 hr)."] }, proHack: "Review OSCP/CEH exam reports (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 OSCP/CEH exam objectives." },
+                            { dayName: "Tuesday", cyber: { details: ["Root 2 HackTheBox boxes (2.5 hrs)", "Focus on different types of machines (Linux, Windows) (30 mins)."] }, proHack: "Try to root a box using a new technique (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot a rooted box." },
+                            { dayName: "Wednesday", cyber: { details: ["Root 3 more HackTheBox boxes (2.5 hrs)", "Document the steps for each rooted box (30 mins)."] }, proHack: "Record your rooting process for review (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot a rooted box." },
+                            { dayName: "Thursday", cyber: { details: ["Review all OSCP/CEH course material (2 hrs)", "Identify any remaining weak areas (1 hr)."] }, proHack: "Create a condensed study guide for last-minute review (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 weak areas for OSCP/CEH." },
+                            { dayName: "Friday", cyber: { details: ["Take a full-length OSCP/CEH practice exam (2.5 hrs)", "Simulate exam conditions rigorously (30 mins)."] }, proHack: "Ensure you have a quiet and distraction-free environment for the practice exam (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot full-length practice exam result." },
+                            { dayName: "Saturday", cyber: { details: ["Review practice exam results (2 hrs)", "Focus on understanding mistakes and improving (1 hr)."] }, proHack: "Get feedback on your practice exam report (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize your practice exam performance (100 words)." },
+                            { dayName: "Sunday", cyber: { details: ["Final preparation for cert exams (2.5 hrs)", "Mental preparation and relaxation (30 mins)."] }, proHack: "Visualize yourself successfully passing the exam (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Write a short motivational message to yourself." }
+                        ]},
+                        { weekNum: 38, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Start on Upwork (1.5 hrs, cyber gigs, ~₹1,000/hr)", "Create a compelling Upwork profile (1.5 hrs)."] }, proHack: "Showcase your best portfolio projects on your Upwork profile (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot Upwork profile." },
+                            { dayName: "Tuesday", cyber: { details: ["Bid on 1 pentest gig (2 hrs)", "Tailor your proposal to the client's needs (1 hr)."] }, proHack: "Highlight your relevant skills and experience in your proposal (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share a bid proposal (150 words)." },
+                            { dayName: "Wednesday", cyber: { details: ["Bid on 2 more pentest gigs (2.5 hrs)", "Focus on different types of gigs (e.g., web, mobile, network) (30 mins)."] }, proHack: "Read reviews of successful freelancers on Upwork (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share 2 more bid proposals (150 words each)." },
+                            { dayName: "Thursday", cyber: { details: ["Learn about client communication and project management on Upwork (1.5 hrs)", "Understand how to set realistic expectations (1.5 hrs)."] }, proHack: "Watch Upwork tutorials on successful freelancing (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Explain effective client communication (50 words)." },
+                            { dayName: "Friday", cyber: { details: ["Review your Upwork proposals for clarity and impact (1.5 hrs)", "Get feedback from a peer (1.5 hrs)."] }, proHack: "Refine your proposals based on feedback (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share a revised bid proposal (150 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Continue bidding on relevant cybersecurity gigs (2.5 hrs)", "Track your application success rate (30 mins)."] }, proHack: "Network with other freelancers on Upwork (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot your Upwork application tracker." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on freelance hustle (2.5 hrs)", "Prepare for next week's Germany Apps (30 mins)."] }, proHack: "Read success stories of cybersecurity freelancers (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize your biggest learning from freelance hustle (100 words)." }
+                        ]},
+                        { weekNum: 39, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Apply for Ausbildung via edupark.com.np (2 hrs, ~₹50,000 for apps/visas)", "Fill out application forms carefully (1 hr)."] }, proHack: "Double-check all application requirements before submitting (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot a completed Ausbildung application form (mock)." },
+                            { dayName: "Tuesday", cyber: { details: ["Translate resume to German (2 hrs, DeepL, free)", "Ensure professional and accurate translation (1 hr)."] }, proHack: "Get a native German speaker to review your translated resume (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share translated resume (mock)." },
+                            { dayName: "Wednesday", cyber: { details: ["Prepare supporting documents for Ausbildung applications (2 hrs, e.g., certificates, transcripts)", "Organize documents clearly (1 hr)."] }, proHack: "Scan and digitize all necessary documents (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 supporting documents for Ausbildung." },
+                            { dayName: "Thursday", cyber: { details: ["Research interview processes for German Ausbildung programs (1.5 hrs)", "Understand typical interview questions (1.5 hrs)."] }, proHack: "Practice common German interview phrases (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 German Ausbildung interview questions." },
+                            { dayName: "Friday", cyber: { details: ["Review your motivation letter/statement of purpose for Ausbildung (1.5 hrs)", "Ensure it highlights your passion for cybersecurity and Germany (1.5 hrs)."] }, proHack: "Get feedback on your motivation letter (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share a draft of your motivation letter (mock, 150 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Continue applying for Ausbildung programs (2.5 hrs)", "Track application deadlines (30 mins)."] }, proHack: "Set up reminders for application deadlines (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot your Ausbildung application tracker." },
+                            { dayName: "Sunday", cyber: { details: ["Consolidate notes on Germany applications (2.5 hrs)", "Prepare for next week's Be the King (30 mins)."] }, proHack: "Connect with current Ausbildung students in Germany (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Summarize your biggest learning from Germany applications (100 words)." }
+                        ]},
+                        { weekNum: 40, dailyCyberTime: "3 hrs", dailyGermanTime: "2 hrs", germanTool: "B2 exam, ~₹10,000", days: [
+                            { dayName: "Monday", cyber: { details: ["Launch a WordPress blog (2 hrs, free) for write-ups", "Choose a professional theme (1 hr)."] }, proHack: "Select a catchy domain name for your blog (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share blog link (mock or real)." },
+                            { dayName: "Tuesday", cyber: { details: ["Post a 500-word CTF/vuln write-up on your blog (2.5 hrs)", "Include clear explanations and screenshots (30 mins)."] }, proHack: "Optimize your blog post for search engines (SEO) (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Share CTF/vuln write-up link (mock or real)." },
+                            { dayName: "Wednesday", cyber: { details: ["Promote your blog on social media (2 hrs, e.g., X, LinkedIn)", "Engage with the cybersecurity community (1 hr)."] }, proHack: "Share your blog posts in relevant cybersecurity groups (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Screenshot social media promotion of your blog." },
+                            { dayName: "Thursday", cyber: { details: ["Network with cybersecurity professionals (2 hrs)", "Attend virtual meetups or webinars (1 hr)."] }, proHack: "Prepare a concise introduction about yourself and your skills (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 networking tips for cybersecurity professionals." },
+                            { dayName: "Friday", cyber: { details: ["Review your entire 10-month journey (2.5 hrs)", "Celebrate your achievements and growth (30 mins)."] }, proHack: "Reflect on challenges overcome and lessons learned (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Write a reflection on your 10-month journey (200 words)." },
+                            { dayName: "Saturday", cyber: { details: ["Plan your next steps (2.5 hrs, e.g., next certification, new project)", "Set new goals for continuous learning (30 mins)."] }, proHack: "Identify a mentor who can guide your next steps (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "List 3 new goals for your cybersecurity career." },
+                            { dayName: "Sunday", cyber: { details: ["Rest and recharge (3 hrs)", "Enjoy the fruits of your labor (30 mins)."] }, proHack: "Spend quality time with loved ones (30 mins).", german: { details: ["B2 exam prep (1 hr)", "Practice exams (1 hr)."] }, taskSubmission: "Write a thank you note to yourself for your hard work." }
+                        ]}
+                    ]
+                }
+            ],
+            moneyAndHustle: {
+                gigs: "Tutor or deliver (~₹10,000/month).",
+                stocks: "Invest ₹5,000/month in ETFs via Zerodha. Save ₹50,000 by month 10.",
+                budget: "Certs (₹35,000), German (₹30,000), apps (₹50,000). Total: ~₹1.15L. Fund via gigs + SBI loan (7% interest)."
+            },
+            dailyVibeCheck: {
+                morning: "Voice exercises (5 mins), skincare (10 mins).",
+                evening: "30-min workout (bodyweight, ₹0).",
+                weekly: "Check Zerodha, adjust ₹1,000 if needed.",
+                bonus: "Don't forget to get enough sleep, Aben! And maybe try 5 minutes of just chilling, no screens, no studies, just breathing. It helps clear the head, especially when you're stressed."
+            }
+        };
+
+        let currentMonthIndex = 0;
+        let currentWeekIndexInMonth = 0; // Tracks the index of the week within the current month
+        let progressChartInstance = null;
+        const taskStates = {}; // To store checkbox states: { 'monthNum-weekNum-dayIndex-taskType-taskIndex': boolean }
+
+        const monthGoalEl = document.getElementById('month-goal');
+        const weeksContainerEl = document.getElementById('weeks-container');
+        const weekDetailsSection = document.getElementById('week-details');
+        const monthDetailsSection = document.getElementById('month-details');
+        const weekTitleEl = document.getElementById('week-title');
+        const daysContainerEl = document.getElementById('days-container');
+        const progressTextEl = document.getElementById('progress-text');
+        const progressBarEl = document.getElementById('progressBar');
+        const monthTabsContainer = document.getElementById('month-tabs');
+        const backToMonthButton = document.getElementById('back-to-month');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const darkModeIcon = document.getElementById('darkModeIcon');
+        const darkModeText = document.getElementById('darkModeText');
+
+        const llmModal = document.getElementById('llmModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const closeButton = document.querySelector('.close-button');
+
+        // Dark Mode Logic
+        function setDarkMode(isDark) {
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                darkModeIcon.textContent = '🌙';
+                darkModeText.textContent = 'Dark Mode';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkModeIcon.textContent = '☀️';
+                darkModeText.textContent = 'Light Mode';
+                localStorage.setItem('theme', 'light');
+            }
+            // Update chart colors on theme change
+            if (progressChartInstance) {
+                const { completedTasks, totalTasks } = calculateProgress();
+                progressChartInstance.data.datasets[0].backgroundColor = isDark ? ['#38B2AC', '#4A5568'] : ['#4FD1C5', '#E2E8F0'];
+                progressChartInstance.update();
+            }
+        }
+
+        // Initialize theme from localStorage or default to light
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            setDarkMode(true);
+        } else {
+            setDarkMode(false);
+        }
+
+        darkModeToggle.onclick = () => {
+            setDarkMode(!document.documentElement.classList.contains('dark'));
+        };
+
+        closeButton.onclick = () => {
+            llmModal.style.display = 'none';
+        };
+
+        window.onclick = (event) => {
+            if (event.target === llmModal) {
+                llmModal.style.display = 'none';
+            }
+        };
+
+        async function callGemini(prompt, title) {
+            modalTitle.textContent = title || "Generating...";
+            modalContent.innerHTML = '<div class="loading-spinner"></div><p class="text-center mt-2">Generating...</p>';
+            llmModal.style.display = 'flex';
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    modalContent.innerHTML = `<p>${text}</p>`;
+                } else {
+                    modalContent.innerHTML = '<p class="text-red-500">Error: Could not generate content. Please try again.</p>';
+                }
+            } catch (error) {
+                modalContent.innerHTML = `<p class="text-red-500">Error: ${error.message}. Please check your network connection.</p>`;
+            }
+        }
+
+        function createConfetti(x, y) {
+            const confettiCount = 30;
+            for (let i = 0; i < confettiCount; i++) {
+                const piece = document.createElement('div');
+                piece.classList.add('confetti');
+                piece.style.left = `${x + (Math.random() - 0.5) * 50}px`;
+                piece.style.top = `${y + (Math.random() - 0.5) * 50}px`;
+                piece.style.animationDelay = `${Math.random() * 0.5}s`;
+                piece.style.transform = `scale(${0.5 + Math.random() * 0.5}) rotate(${Math.random() * 360}deg)`;
+                document.body.appendChild(piece);
+                // Remove confetti after animation
+                piece.addEventListener('animationend', () => {
+                    piece.remove();
+                });
+            }
+        }
+
+
+        function createTaskListItem(taskText, monthNum, weekNum, dayIndex, taskType, taskIndex) {
+            const li = document.createElement('li');
+            li.className = 'mb-1 flex items-start';
+            
+            const checkboxId = `task-${monthNum}-${weekNum}-${dayIndex}-${taskType}-${taskIndex}`;
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = checkboxId;
+            checkbox.className = 'task-checkbox mr-2 mt-1 flex-shrink-0 form-checkbox h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 dark:border-gray-600 dark:bg-gray-700 dark:checked:bg-teal-500';
+            checkbox.checked = taskStates[checkboxId] || false;
+            checkbox.onchange = (event) => {
+                taskStates[checkboxId] = checkbox.checked;
+                updateProgressChart();
+                if (checkbox.checked) {
+                    createConfetti(event.clientX, event.clientY);
+                }
+            };
+
+            const label = document.createElement('label');
+            label.htmlFor = checkboxId;
+            label.textContent = taskText;
+            label.className = 'text-gray-700 dark:text-gray-300';
+            
+            li.appendChild(checkbox);
+            li.appendChild(label);
+
+            if (taskType === 'cyber') {
+                const explainButton = document.createElement('button');
+                explainButton.className = 'llm-button';
+                explainButton.textContent = '✨ Explain Concept';
+                explainButton.onclick = (e) => {
+                    e.stopPropagation();
+                    callGemini(`Explain the cybersecurity concept: "${taskText.split('(')[0].trim()}". Keep it concise and easy to understand.`, "Cybersecurity Concept Explanation");
+                };
+                li.appendChild(explainButton);
+            } else if (taskType === 'german') {
+                const generateButton = document.createElement('button');
+                generateButton.className = 'llm-button';
+                generateButton.textContent = '✨ More German Sentences';
+                generateButton.onclick = (e) => {
+                    e.stopPropagation();
+                    const germanTopic = taskText.match(/\(([^)]+)\)/);
+                    const topic = germanTopic ? germanTopic[1].trim() : "general German phrases";
+                    callGemini(`Generate 3-5 simple German sentences related to "${topic}". Provide both German and English translations.`, "More German Sentences");
+                };
+                li.appendChild(generateButton);
+            } else if (taskType === 'submission') {
+                const elaborateButton = document.createElement('button');
+                elaborateButton.className = 'llm-button';
+                elaborateButton.textContent = '✨ Elaborate on Submission';
+                elaborateButton.onclick = (e) => {
+                    e.stopPropagation();
+                    callGemini(`Elaborate on the following task submission: '${taskText}'. What are the key aspects to focus on, or what would a good submission for this task entail? Provide some actionable advice.`, "Task Submission Assistant");
+                };
+                li.appendChild(elaborateButton);
+            }
+
+            return li;
+        }
+        
+        function createTaskList(tasks, monthNum, weekNum, dayIndex, taskType) {
+            const ul = document.createElement('ul');
+            ul.className = 'list-none pl-0 space-y-1';
+            tasks.forEach((task, index) => {
+                ul.appendChild(createTaskListItem(task, monthNum, weekNum, dayIndex, taskType, index));
+            });
+            return ul;
+        }
+
+        function renderMonthTabs() {
+            monthTabsContainer.innerHTML = '';
+            studyPlanData.months.forEach((month, index) => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.id = `tab-month${month.monthNum}`;
+                button.className = `month-tab px-4 py-2 rounded-md font-semibold text-sm sm:text-base ${index === 0 ? 'tab-active' : 'tab-inactive'} hover:bg-opacity-80`;
+                button.textContent = `Month ${month.monthNum}`;
+                button.onclick = () => renderMonth(index);
+                li.appendChild(button);
+                monthTabsContainer.appendChild(li);
+            });
+        }
+
+        function renderMonth(monthIndex) {
+            currentMonthIndex = monthIndex;
+            const monthData = studyPlanData.months[monthIndex];
+            
+            monthGoalEl.innerHTML = `<h3 class="font-semibold text-lg">${monthData.title}</h3><p>${monthData.goal}</p>`;
+            weeksContainerEl.innerHTML = '';
+            daysContainerEl.innerHTML = ''; // Clear days when switching months
+            weekDetailsSection.classList.add('hidden'); // Hide week details
+            monthDetailsSection.classList.remove('hidden'); // Show month details
+
+            monthData.weeks.forEach((week, weekIdx) => {
+                const weekCard = document.createElement('div');
+                weekCard.className = 'week-card rounded-lg shadow overflow-hidden p-4 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700';
+                weekCard.innerHTML = `<h4 class="font-semibold text-gray-800 dark:text-gray-100">Week ${week.weekNum}</h4>
+                                      <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">Cyber: ${week.dailyCyberTime} | German: ${week.dailyGermanTime}</p>
+                                      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${week.germanTool}</p>`;
+                weekCard.onclick = () => renderWeek(monthIndex, weekIdx);
+                weeksContainerEl.appendChild(weekCard);
+            });
+            updateActiveMonthTab();
+        }
+
+        function renderWeek(monthIndex, weekIndexInMonth) {
+            currentMonthIndex = monthIndex;
+            currentWeekIndexInMonth = weekIndexInMonth;
+            const monthData = studyPlanData.months[monthIndex];
+            const weekData = monthData.weeks[weekIndexInMonth];
+            
+            weekTitleEl.innerHTML = `<h3 class="font-semibold text-lg">Week ${weekData.weekNum}</h3>`;
+            daysContainerEl.innerHTML = ''; 
+
+            monthDetailsSection.classList.add('hidden'); // Hide month details
+            weekDetailsSection.classList.remove('hidden'); // Show week details
+
+            weekData.days.forEach((day, dayIdx) => {
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card rounded-lg shadow overflow-hidden';
+
+                const cardHeader = document.createElement('div');
+                cardHeader.className = 'day-card-header bg-gray-100 p-3 sm:p-4 flex justify-between items-center dark:bg-gray-700 dark:text-gray-100';
+                cardHeader.innerHTML = `<h4 class="font-semibold text-gray-800 dark:text-gray-100">${day.dayName}</h4><span class="text-teal-500 text-xl transform transition-transform duration-300">&#9662;</span>`;
+                
+                const cardContent = document.createElement('div');
+                cardContent.className = 'day-card-content p-3 sm:p-4 border-t border-gray-200 dark:border-gray-600';
+
+                const cyberSection = document.createElement('div');
+                cyberSection.className = 'mb-3';
+                cyberSection.innerHTML = `<h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-1">💻 Cyber (${weekData.dailyCyberTime})</h5>`;
+                cyberSection.appendChild(createTaskList(day.cyber.details, monthData.monthNum, weekData.weekNum, dayIdx, 'cyber'));
+                if (day.proHack) {
+                    const proHackContainer = document.createElement('p');
+                    proHackContainer.className = 'mt-2 text-sm text-gray-600 dark:text-gray-300';
+                    proHackContainer.innerHTML = `<span class="pro-hack-badge">Pro Hack</span>${day.proHack}`;
+                    
+                    const newProHackButton = document.createElement('button');
+                    newProHackButton.className = 'llm-button';
+                    newProHackButton.textContent = '✨ New Pro Hack Idea';
+                    newProHackButton.onclick = (e) => {
+                        e.stopPropagation();
+                        const cyberTopic = day.cyber.details[0].split('(')[0].trim();
+                        const germanTopic = day.german.details[0].match(/\(([^)]+)\)/);
+                        const germanTopicText = germanTopic ? germanTopic[1].trim() : "German language learning";
+
+                        callGemini(`Suggest a new and creative "Pro Hack" for a student learning cybersecurity (specifically about ${cyberTopic}) and German (specifically about ${germanTopicText}).`, "New Pro Hack Idea");
+                    };
+                    proHackContainer.appendChild(newProHackButton);
+                    cyberSection.appendChild(proHackContainer);
+                }
+                cardContent.appendChild(cyberSection);
+
+                const germanSection = document.createElement('div');
+                germanSection.className = 'mb-3';
+                germanSection.innerHTML = `<h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-1">🇩🇪 German (${weekData.dailyGermanTime})</h5>`;
+                germanSection.appendChild(createTaskList(day.german.details, monthData.monthNum, weekData.weekNum, dayIdx, 'german'));
+                cardContent.appendChild(germanSection);
+
+                const submissionSection = document.createElement('div');
+                submissionSection.className = 'mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-gray-600';
+                submissionSection.innerHTML = `<h5 class="font-semibold text-gray-700 dark:text-gray-200 mb-1">📝 Task for Submission</h5>`;
+                submissionSection.appendChild(createTaskListItem(day.taskSubmission, monthData.monthNum, weekData.weekNum, dayIdx, 'submission', 0));
+                cardContent.appendChild(submissionSection);
+
+                // New: Daily Summary Button
+                const dailySummarySection = document.createElement('div');
+                dailySummarySection.className = 'mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 text-center';
+                const dailySummaryButton = document.createElement('button');
+                dailySummaryButton.className = 'llm-button';
+                dailySummaryButton.textContent = `✨ Generate Daily Summary for ${day.dayName}`;
+                dailySummaryButton.onclick = (e) => {
+                    e.stopPropagation();
+                    const cyberTasks = day.cyber.details.join(', ');
+                    const germanTasks = day.german.details.join(', ');
+                    const proHack = day.proHack || 'None';
+                    const taskSubmission = day.taskSubmission;
+                    const prompt = `Generate a concise daily summary for a cybersecurity student based on the following activities for ${day.dayName}: Cyber tasks: ${cyberTasks}. German tasks: ${germanTasks}. Pro Hack: ${proHack}. Task for Submission: ${taskSubmission}. Highlight key learnings and suggest a forward-looking thought.`;
+                    callGemini(prompt, `Daily Summary for ${day.dayName}`);
+                };
+                dailySummarySection.appendChild(dailySummaryButton);
+                cardContent.appendChild(dailySummarySection);
+
+
+                dayCard.appendChild(cardHeader);
+                dayCard.appendChild(cardContent);
+                daysContainerEl.appendChild(dayCard);
+
+                cardHeader.onclick = () => {
+                    cardContent.classList.toggle('expanded');
+                    const arrow = cardHeader.querySelector('span');
+                    arrow.style.transform = cardContent.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
+                };
+            });
+            updateProgressChart();
+        }
+        
+        backToMonthButton.onclick = () => {
+            renderMonth(currentMonthIndex);
+        };
+
+        function updateActiveMonthTab() {
+            const monthTabs = document.querySelectorAll('.month-tab');
+            monthTabs.forEach((tab, index) => {
+                if (index === currentMonthIndex) {
+                    tab.classList.replace('tab-inactive', 'tab-active');
+                } else {
+                    tab.classList.replace('tab-active', 'tab-inactive');
+                }
+            });
+        }
+
+        function calculateProgress() {
+            const monthData = studyPlanData.months[currentMonthIndex];
+            const weekData = monthData.weeks[currentWeekIndexInMonth];
+            let totalTasks = 0;
+            let completedTasks = 0;
+
+            weekData.days.forEach((day, dayIdx) => {
+                // Cyber tasks
+                day.cyber.details.forEach((_, taskIdx) => {
+                    const checkboxId = `task-${monthData.monthNum}-${weekData.weekNum}-${dayIdx}-cyber-${taskIdx}`;
+                    if (taskStates[checkboxId]) completedTasks++;
+                    totalTasks++;
+                });
+
+                // German tasks
+                day.german.details.forEach((_, taskIdx) => {
+                    const checkboxId = `task-${monthData.monthNum}-${weekData.weekNum}-${dayIdx}-german-${taskIdx}`;
+                    if (taskStates[checkboxId]) completedTasks++;
+                    totalTasks++;
+                });
+
+                // Submission task (always index 0 for its type)
+                const submissionCheckboxId = `task-${monthData.monthNum}-${weekData.weekNum}-${dayIdx}-submission-0`;
+                if (taskStates[submissionCheckboxId]) completedTasks++;
+                totalTasks++;
+            });
+            return { completedTasks, totalTasks };
+        }
+
+        function updateProgressChart() {
+            const { completedTasks, totalTasks } = calculateProgress();
+            const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            
+            progressTextEl.textContent = `${completedTasks} / ${totalTasks} tasks completed (${progressPercentage.toFixed(0)}%)`;
+            progressBarEl.style.width = `${progressPercentage}%`;
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const chartBgColor = isDark ? '#38B2AC' : '#4FD1C5';
+            const chartBorderColor = isDark ? '#4A5568' : '#E2E8F0';
+
+            const chartData = {
+                labels: ['Completed', 'Pending'],
+                datasets: [{
+                    data: [completedTasks, totalTasks - completedTasks],
+                    backgroundColor: [chartBgColor, chartBorderColor],
+                    borderColor: ['#FFFFFF', '#FFFFFF'],
+                    borderWidth: 2
+                }]
+            };
+
+            if (progressChartInstance) {
+                progressChartInstance.data = chartData;
+                progressChartInstance.update();
+            } else {
+                const ctx = document.getElementById('progressChart').getContext('2d');
+                progressChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                   label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true
+                        }
+                    }
+                });
+            }
+        }
+
+        function populateStaticSections() {
+            document.getElementById('gigs-content').textContent = studyPlanData.moneyAndHustle.gigs;
+            document.getElementById('stocks-content').textContent = studyPlanData.moneyAndHustle.stocks;
+            document.getElementById('budget-content').textContent = studyPlanData.moneyAndHustle.budget;
+
+            document.getElementById('morning-vibe-content').textContent = studyPlanData.dailyVibeCheck.morning;
+            document.getElementById('evening-vibe-content').textContent = studyPlanData.dailyVibeCheck.evening;
+            document.getElementById('weekly-vibe-content').textContent = studyPlanData.dailyVibeCheck.weekly;
+            document.getElementById('bonus-vibe-content').textContent = studyPlanData.dailyVibeCheck.bonus;
+        }
+        
+        // Initial render
+        populateStaticSections();
+        renderMonthTabs();
+        renderMonth(0); // Start with Month 1
+
+    </script>
+</body>
+</html>
